@@ -1,0 +1,77 @@
+# pyproject.toml — twelvetake-helix-stadium-mcp (the MCP server).
+#
+# Distribution name is brand-prefixed (twelvetake-…); the import package stays
+# `helix_stadium_mcp` and the console script stays `helix-stadium-mcp`, mirroring
+# the reaper-mcp / gimp-mcp convention.
+#
+# Independent, unofficial tool — NOT affiliated with or endorsed by Line 6 or
+# Yamaha Guitar Group. Ships zero Line 6 content; reads the model catalog from
+# the user's own installed Helix Stadium at runtime.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "twelvetake-helix-stadium-mcp"
+version = "0.1.0"
+description = "An MCP server for reading, explaining, and editing Line 6 Helix Stadium (.hsp) presets. Independent/unofficial; not affiliated with Line 6 or Yamaha Guitar Group."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+    { name = "TwelveTake Studios LLC", email = "contact@twelvetake.com" },
+]
+keywords = [
+    "helix", "line6", "guitar", "preset", "tone",
+    "mcp", "model-context-protocol", "claude", "ai",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Operating System :: Microsoft :: Windows",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "mcp>=1.27,<2",   # Model Context Protocol SDK (FastMCP). Codec/catalog use only stdlib.
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[project.urls]
+Homepage = "https://twelvetake.com"
+Repository = "https://github.com/TwelveTake-Studios/helix-stadium-mcp"
+Issues = "https://github.com/TwelveTake-Studios/helix-stadium-mcp/issues"
+Funding = "https://buymeacoffee.com/twelvetake"
+
+[project.scripts]
+helix-stadium-mcp = "helix_stadium_mcp.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/helix_stadium_mcp"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "tests/", ".github/", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+exclude = ["**/__pycache__", "**/*.pyc"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "install: requires a real installed Helix Stadium (its res/ catalog); skipped unless --run-install",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["experiments", "reference"]

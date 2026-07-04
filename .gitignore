@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Never commit real presets (user content; factory presets are Line 6 content)
+*.hsp
+*.hss
+*.hls
+*.hsf
+
+# Line 6 catalog copy — a regenerable straight copy from the book project; dev-only,
+# do NOT version it (avoids committing Line 6 copyrighted content even privately).
+reference/editor-help/
+
+# OS / editor
+.DS_Store
+Thumbs.db
