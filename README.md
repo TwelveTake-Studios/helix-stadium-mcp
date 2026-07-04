@@ -13,8 +13,9 @@ An [MCP](https://modelcontextprotocol.io) server that lets an AI assistant **rea
 - **Reads** `.hsp` presets losslessly (byte-exact round-trip).
 - **Explains** a preset in plain English — the full signal chain of each path with friendly model
   names, on/off state, per-snapshot & footswitch tags, and parameters in real units (dB, Hz, ms, %).
+- **Diffs snapshots** — exactly what changes between two snapshots (e.g. Rhythm vs Lead), in real units.
 - **Browses** the model catalog (list / describe / search models).
-- **Validates** a preset's structure.
+- **Validates** a preset's structure (and, with the catalog, its model ids and controller sources).
 
 Editing, generation, and setlist tooling are on the roadmap.
 
@@ -48,8 +49,8 @@ containing `P35ModelCatalog.json`). Check detection with `helix-stadium-mcp doct
 
 ## Tools (v1)
 
-`read_preset` · `explain_preset` · `list_models` · `describe_model` · `search_models` ·
-`validate_preset` · `detect_install`
+`read_preset` · `explain_preset` · `diff_snapshots` · `list_models` · `describe_model` ·
+`search_models` · `validate_preset` · `detect_install`
 
 ## License
 

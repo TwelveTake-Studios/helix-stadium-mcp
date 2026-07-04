@@ -27,10 +27,12 @@ catalog is read at runtime from the user's own installed Helix Stadium.
 - **Preset** (`preset/`) — reconstructs the signal flow (per path, per block) and the
   plain-English `explain` rendering with friendly model names, on/off state,
   per-snapshot & footswitch tags, and parameters in real units.
-- **Tools** over FastMCP — `read_preset`, `explain_preset`, `list_models`,
-  `describe_model`, `search_models`, `validate_preset`, `detect_install`; each returns
-  the structured envelope. The server builds and registers all three tool groups
-  (read / models / admin).
+- **Tools** over FastMCP (8) — `read_preset`, `explain_preset`, `diff_snapshots`,
+  `list_models`, `describe_model`, `search_models`, `validate_preset`, `detect_install`;
+  each returns the structured envelope. The server builds and registers all three tool
+  groups (read / models / admin).
+- **Validation** (`validation/`) — structural + catalog checks: shape, 8-slot snapshot
+  arrays, block positions, model-id resolution, and controller source-reference integrity.
 - **Install detection** (`config.py`) — resolves the catalog `res/` directory from an
   explicit path, the `HELIX_STADIUM_RES` env var, or platform auto-detect
   (Windows confirmed; macOS candidates staged, unverified).
