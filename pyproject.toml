@@ -4,9 +4,8 @@
 # `helix_stadium_mcp` and the console script stays `helix-stadium-mcp`, mirroring
 # the reaper-mcp / gimp-mcp convention.
 #
-# Independent, unofficial tool — NOT affiliated with or endorsed by Line 6 or
-# Yamaha Guitar Group. Ships zero Line 6 content; reads the model catalog from
-# the user's own installed Helix Stadium at runtime.
+# Reads the model catalog from the user's own installed Helix Stadium at runtime.
+# Trademark/affiliation notice lives in the README Trademarks section.
 
 [build-system]
 requires = ["hatchling"]
@@ -14,8 +13,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "twelvetake-helix-stadium-mcp"
-version = "0.1.0"
-description = "An MCP server for reading, explaining, and editing Line 6 Helix Stadium (.hsp) presets. Independent/unofficial; not affiliated with Line 6 or Yamaha Guitar Group."
+version = "0.1.1"
+description = "Read and explain Line 6 Helix Stadium (.hsp) presets in plain language — an MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
@@ -23,11 +22,12 @@ authors = [
     { name = "TwelveTake Studios LLC", email = "contact@twelvetake.com" },
 ]
 keywords = [
-    "helix", "line6", "guitar", "preset", "tone",
+    "helix", "helix-stadium", "hsp", "line6", "guitar", "preset", "tone",
     "mcp", "model-context-protocol", "claude", "ai",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
+    "Environment :: Console",
     "Intended Audience :: End Users/Desktop",
     "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
@@ -53,6 +53,7 @@ dev = [
 Homepage = "https://twelvetake.com"
 Repository = "https://github.com/TwelveTake-Studios/helix-stadium-mcp"
 Issues = "https://github.com/TwelveTake-Studios/helix-stadium-mcp/issues"
+Changelog = "https://github.com/TwelveTake-Studios/helix-stadium-mcp/blob/main/CHANGELOG.md"
 Funding = "https://buymeacoffee.com/twelvetake"
 
 [project.scripts]
@@ -62,7 +63,7 @@ helix-stadium-mcp = "helix_stadium_mcp.cli:main"
 packages = ["src/helix_stadium_mcp"]
 
 [tool.hatch.build.targets.sdist]
-include = ["src/", "tests/", ".github/", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+include = ["src/", "tests/", ".github/", "README.md", "LICENSE", "CHANGELOG.md", "SECURITY.md", "pyproject.toml"]
 exclude = ["**/__pycache__", "**/*.pyc"]
 
 [tool.pytest.ini_options]

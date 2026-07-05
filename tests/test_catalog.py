@@ -1,7 +1,7 @@
 """Catalog tests against a REAL installed Helix Stadium.
 
-Install-gated: run with `pytest --run-install`. Nothing here is bundled — it reads
-the user's own install and asserts the spec/02 counts + the stereo-alias trap.
+Install-gated: run with `pytest --run-install`. It reads the user's own install
+and asserts the spec/02 counts + the stereo-alias trap.
 """
 import pytest
 

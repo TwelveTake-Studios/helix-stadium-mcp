@@ -1,4 +1,4 @@
-"""Value-encoding tests with a synthetic fake catalog (no real Line 6 content)."""
+"""Value-encoding tests with a synthetic fake catalog."""
 from helix_stadium_mcp.encoding import display_string
 
 

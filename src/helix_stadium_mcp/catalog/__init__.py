@@ -1,7 +1,7 @@
 """Model catalog loaded from the user's own Helix Stadium install.
 
-Reads P35ModelCatalog / P35ModelUIDefs / P35Controls from ``res/`` at runtime
-(never bundled — SPEC §8). Resolves ``*Stereo`` model ids via their base model's
+Reads P35ModelCatalog / P35ModelUIDefs / P35Controls from ``res/`` at runtime.
+Resolves ``*Stereo`` model ids via their base model's
 ``stereo_model`` field, and joins each param to its ``display_tag`` control-type.
 """
 from __future__ import annotations

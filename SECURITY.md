@@ -20,16 +20,15 @@ account. This project does not provide that isolation itself.
 - **No arbitrary-code-execution tool.** Unlike some MCP servers, this one exposes
   **no raw exec / eval escape hatch.** The entire tool surface is a fixed set of
   structured, parameter-validated tools (`read_preset`, `explain_preset`,
-  `list_models`, `describe_model`, `search_models`, `validate_preset`,
-  `detect_install`). There is no tool that runs attacker-supplied code.
+  `diff_snapshots`, `list_models`, `describe_model`, `search_models`,
+  `validate_preset`, `detect_install`). There is no tool that runs attacker-supplied code.
 - **Read-only, today.** The v1 surface only *reads*: it parses `.hsp` presets and
   reads the model catalog from your own install. It does not write files, does not
   modify presets, and does not reach the network. It runs over stdio and does not
   open a listening socket.
-- **Ships zero Line 6 content.** No catalog, preset, or editor data is bundled or
-  redistributed. The catalog is read at runtime from *your own* installed Helix
-  Stadium (`HELIX_STADIUM_RES`, or platform auto-detect). Nothing about your
-  install is transmitted anywhere.
+- **Reads from your own install; transmits nothing.** The catalog is read at runtime
+  from *your own* installed Helix Stadium (`HELIX_STADIUM_RES`, or platform
+  auto-detect), and nothing about your install is sent anywhere.
 
 ### What it does not protect against
 

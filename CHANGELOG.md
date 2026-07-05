@@ -6,11 +6,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-04
+
+Documentation and packaging patch. No functional or API changes; the tool surface is
+unchanged and remains read-only.
+
+### Changed
+- Expanded the README with real usage content: a plain-language lead-in, an example
+  `explain` output, a "Try asking" section, a versioned roadmap, and an expanded tool
+  reference. Moved trademark/affiliation into a dedicated Trademarks note that also covers
+  amp, cab, and effect model names, and reworded `SECURITY.md`, the package docstring, and
+  the CLI `version` disclaimer in the same plain, factual voice.
+- Rewrote the `pyproject.toml` package summary to match the read-only tool surface
+  (dropped the stale "editing" claim); added `helix-stadium`/`hsp` keywords and an
+  `Environment :: Console` classifier; added a Changelog project URL.
+
+### Fixed
+- Made the README `LICENSE` link absolute so it resolves on the PyPI project page.
+- Added the missing `diff_snapshots` entry to the tool list in `SECURITY.md`.
+- Included `SECURITY.md` in the source distribution (`sdist`).
+
 ## [0.1.0] - 2026-07-04
 
 First release. The Phase-1 core: a read-only MCP server that reads, explains, and
-browses Line 6 Helix Stadium `.hsp` presets. Ships **zero Line 6 content** — the model
-catalog is read at runtime from the user's own installed Helix Stadium.
+browses Line 6 Helix Stadium `.hsp` presets. The model catalog is read at runtime from
+the user's own installed Helix Stadium.
 
 ### Added
 - **Codec** (`codec/`) — the `.hsp` container: the 8-byte magic header, a
@@ -49,5 +69,6 @@ catalog is read at runtime from the user's own installed Helix Stadium.
   planned `HELIX_MCP_READONLY` toggle will keep the server read-only even after write
   tools land. The threat model is documented in `SECURITY.md`.
 
-[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/releases/tag/v0.1.0

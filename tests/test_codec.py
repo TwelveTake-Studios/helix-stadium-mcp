@@ -1,4 +1,4 @@
-"""Codec tests on SYNTHETIC fixtures (no real Line 6 content in the public tree)."""
+"""Codec tests on synthetic fixtures."""
 from helix_stadium_mcp.codec import MAGIC, read_hsp, round_trip, write_hsp
 from helix_stadium_mcp.codec.floatfmt import to_decimal_string
 from helix_stadium_mcp.codec.serialize import serialize

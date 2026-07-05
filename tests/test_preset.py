@@ -1,4 +1,4 @@
-"""Snapshot-diff + validation tests on synthetic fixtures (no real Line 6 content)."""
+"""Snapshot-diff + validation tests on synthetic fixtures."""
 from helix_stadium_mcp.preset import resolve_snapshot_index, snapshot_diff
 from helix_stadium_mcp.validation import validate
 
