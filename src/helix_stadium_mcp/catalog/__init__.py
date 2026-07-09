@@ -103,6 +103,16 @@ class Catalog:
             ],
         }
 
+    def find_model_id(self, name_or_id: str) -> str | None:
+        """Resolve a model id or exact friendly name (case-insensitive) to a model id."""
+        if name_or_id in self.uidefs or name_or_id in self.stereo_base:
+            return name_or_id
+        target = name_or_id.strip().lower()
+        for mid in self.model_category:
+            if self.friendly_name(mid).lower() == target:
+                return mid
+        return None
+
     def search(self, query: str, limit: int = 25) -> list[dict]:
         q = query.lower()
         hits = []

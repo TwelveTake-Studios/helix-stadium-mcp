@@ -103,3 +103,241 @@ def test_render_param_tempo_sync():
     # synced Time -> note division; the SyncSelect param -> note name
     assert render_param(cat, "Delay", "Time", params["Time"], params) == "1/8 Dotted"
     assert render_param(cat, "Delay", "SyncSelect1", params["SyncSelect1"], params) == "1/8 Dotted"
+
+
+# --- edit helpers -----------------------------------------------
+def test_edit_param_current_syncs_active_snapshot():
+    from helix_stadium_mcp.preset import edit_param, find_block
+    obj = _preset()
+    edit_param(obj, 1, "b00", "Drive", 0.7)          # active snapshot is 0
+    _blk, slot0 = find_block(obj, 1, "b00")
+    pv = slot0["params"]["Drive"]
+    assert pv["value"] == 0.7 and isinstance(pv["value"], float)
+    assert pv["snapshots"][0] == 0.7                 # active-snapshot slot synced
+
+
+def test_edit_param_specific_snapshot_leaves_current():
+    from helix_stadium_mcp.preset import edit_param, find_block
+    obj = _preset()
+    edit_param(obj, 1, "b00", "Drive", 0.9, snapshot=1)   # snapshot 1 (not active)
+    pv = find_block(obj, 1, "b00")[1]["params"]["Drive"]
+    assert pv["snapshots"][1] == 0.9
+    assert pv["value"] == 0.5                         # current value unchanged
+
+
+def test_edit_param_block_key_forms_and_unknown():
+    import pytest
+    from helix_stadium_mcp.preset import edit_param
+    edit_param(_preset(), 1, "0", "Drive", 0.6)       # 'b00' == '0'
+    with pytest.raises(KeyError):
+        edit_param(_preset(), 1, "b00", "Nonexistent", 1.0)
+
+
+def test_toggle_block():
+    from helix_stadium_mcp.preset import find_block, toggle_block
+    obj = _preset()
+    toggle_block(obj, 1, "b00", False)
+    assert find_block(obj, 1, "b00")[0]["@enabled"]["value"] is False
+
+
+def _chain_preset():
+    def blk(model, pos, btype, endpoint=None):
+        b = {"@enabled": {"value": True}, "favorite": 0,
+             "harness": {"@enabled": {"value": True}}, "path": 0, "position": pos, "type": btype,
+             "slot": [{"@enabled": {"value": True}, "model": model, "params": {}, "version": 0}]}
+        if endpoint:
+            b["endpoint"] = endpoint
+        return b
+    snaps = [{"name": "S1", "color": "blue", "expsw": 1, "source": 0, "tempo": 120.0, "valid": True}]
+    snaps += [{"name": f"S{i}", "expsw": -1, "source": 0, "tempo": 120.0, "valid": False}
+              for i in range(2, 9)]
+    return {
+        "meta": {"color": "auto", "device_id": 1, "device_version": 1, "info": "", "name": "C"},
+        "preset": {
+            "flow": [{
+                "@enabled": {"value": True},
+                "b00": blk("P35_InputInst1", 0, "input", "b13"),
+                "b01": blk("Drive", 1, "fx"),
+                "b02": blk("Amp", 2, "amp"),
+                "b03": blk("Delay", 3, "fx"),
+                "b13": blk("P35_OutputMatrix", 13, "output", "b00"),
+            }],
+            "params": {"tempo": 120.0, "activesnapshot": 0, "activeexpsw": 1,
+                       "inst1Z": "FirstEnabled", "inst2Z": "FirstEnabled"},
+            "snapshots": snaps, "sources": {},
+            "xyctrl": {"rbtime": 0.5, "rubberband": 1, "x": 0, "y": 0},
+        },
+    }
+
+
+def _order(obj):
+    from helix_stadium_mcp.preset import _processing_blocks
+    return [v["slot"][0]["model"] for _, v in _processing_blocks(obj["preset"]["flow"][0])]
+
+
+def test_remove_block():
+    from helix_stadium_mcp.preset import remove_block
+    obj = _chain_preset()
+    remove_block(obj, 1, "b02")
+    assert _order(obj) == ["Drive", "Delay"]
+
+
+def test_remove_block_refuses_io():
+    import pytest
+    from helix_stadium_mcp.preset import remove_block
+    with pytest.raises(ValueError):
+        remove_block(_chain_preset(), 1, "b13")
+
+
+def test_move_block_before_repacks_and_validates():
+    from helix_stadium_mcp.preset import _processing_blocks, move_block
+    from helix_stadium_mcp.validation import validate
+    obj = _chain_preset()
+    move_block(obj, 1, "b03", before="b02")           # Delay before Amp
+    assert _order(obj) == ["Drive", "Delay", "Amp"]
+    assert [v["position"] for _, v in _processing_blocks(obj["preset"]["flow"][0])] == [1, 2, 3]
+    assert validate(obj)["errors"] == []
+
+
+def test_move_block_after():
+    from helix_stadium_mcp.preset import move_block
+    obj = _chain_preset()
+    move_block(obj, 1, "b01", after="b03")            # Drive after Delay
+    assert _order(obj) == ["Amp", "Delay", "Drive"]
+
+
+def test_move_block_needs_exactly_one_ref():
+    import pytest
+    from helix_stadium_mcp.preset import move_block
+    with pytest.raises(ValueError):
+        move_block(_chain_preset(), 1, "b01", before="b02", after="b03")
+
+
+_TEMPLATE = {
+    "@enabled": {"value": True}, "favorite": 0,
+    "harness": {"@enabled": {"value": True},
+                "params": {"EvtIdx": {"value": -1}, "bypass": {"value": False}, "upper": {"value": True}}},
+    "path": 0, "type": "fx",
+    "slot": [{"@enabled": {"value": True}, "model": "NewFx", "params": {"Mix": {"value": 0.5}}, "version": 0}],
+}
+
+
+def test_add_block_at_end_validates():
+    from helix_stadium_mcp.preset import add_block
+    from helix_stadium_mcp.validation import validate
+    obj = _chain_preset()
+    add_block(obj, 1, _TEMPLATE)
+    assert _order(obj) == ["Drive", "Amp", "Delay", "NewFx"]
+    assert validate(obj)["errors"] == []
+
+
+def test_add_block_before():
+    from helix_stadium_mcp.preset import add_block
+    obj = _chain_preset()
+    add_block(obj, 1, _TEMPLATE, before="b02")          # before Amp
+    assert _order(obj) == ["Drive", "NewFx", "Amp", "Delay"]
+
+
+def test_add_block_deepcopies_template():
+    from helix_stadium_mcp.preset import add_block, find_block
+    obj = _chain_preset()
+    k = add_block(obj, 1, _TEMPLATE)
+    find_block(obj, 1, k)[1]["params"]["Mix"]["value"] = 0.9   # mutate the inserted block
+    assert _TEMPLATE["slot"][0]["params"]["Mix"]["value"] == 0.5   # template untouched
+
+
+# --- snapshot generation ----------------------------------------
+def _gen_preset():
+    """8 snapshot slots (only slot 0 valid), one block whose param has NO automation yet."""
+    snaps = [{"name": f"SNAPSHOT {i + 1}", "color": "auto", "expsw": 1, "source": 0,
+              "tempo": 120.0, "valid": i == 0} for i in range(8)]
+    return {
+        "meta": {"name": "G"},
+        "preset": {
+            "params": {"activesnapshot": 0},
+            "snapshots": snaps,
+            "flow": [{
+                "b01": {"type": "fx", "position": 1, "@enabled": {"value": True},
+                        "slot": [{"model": "FxX", "version": 0,
+                                  "params": {"Gain": {"value": 0.5}}}]},
+            }],
+        },
+    }
+
+
+def test_configure_snapshots_sets_validity_names_colors():
+    from helix_stadium_mcp.preset import configure_snapshots
+    obj = _gen_preset()
+    res = configure_snapshots(obj, ["Rhythm", "Lead", "Clean"], ["blue", "pink", "green"])
+    assert res == {"valid": 3, "names": ["Rhythm", "Lead", "Clean"]}
+    snaps = obj["preset"]["snapshots"]
+    assert [s["valid"] for s in snaps] == [True, True, True] + [False] * 5
+    assert snaps[1]["name"] == "Lead" and snaps[1]["color"] == "pink"
+
+
+def test_configure_snapshots_count_bounds():
+    import pytest
+    from helix_stadium_mcp.preset import configure_snapshots
+    with pytest.raises(ValueError):
+        configure_snapshots(_gen_preset(), [])                 # too few
+    with pytest.raises(ValueError):
+        configure_snapshots(_gen_preset(), [f"S{i}" for i in range(9)])  # too many
+
+
+def test_edit_param_auto_creates_automation():
+    from helix_stadium_mcp.preset import configure_snapshots, edit_param, find_block
+    obj = _gen_preset()
+    configure_snapshots(obj, ["Rhythm", "Lead"])
+    edit_param(obj, 1, "b01", "Gain", 0.9, snapshot=1)         # Lead; no array yet
+    pv = find_block(obj, 1, "b01")[1]["params"]["Gain"]
+    assert pv["snapshots"] == [0.5, 0.9, None, None, None, None, None, None]
+    assert pv["value"] == 0.5                                  # active (Rhythm) unchanged
+
+
+def test_toggle_block_per_snapshot_auto_creates():
+    from helix_stadium_mcp.preset import configure_snapshots, find_block, toggle_block
+    obj = _gen_preset()
+    configure_snapshots(obj, ["Rhythm", "Lead"])
+    toggle_block(obj, 1, "b01", False, snapshot=0)             # off in Rhythm
+    en = find_block(obj, 1, "b01")[0]["@enabled"]
+    assert en["snapshots"] == [False, True, None, None, None, None, None, None]
+    assert en["value"] is False                               # active == 0 synced
+
+
+def test_set_active_snapshot_loads_values():
+    from helix_stadium_mcp.preset import (configure_snapshots, edit_param, find_block,
+                                          set_active_snapshot)
+    obj = _gen_preset()
+    configure_snapshots(obj, ["Rhythm", "Lead"])
+    edit_param(obj, 1, "b01", "Gain", 0.9, snapshot=1)         # Lead=0.9, Rhythm stays 0.5
+    set_active_snapshot(obj, 1)                                # switch to Lead
+    pv = find_block(obj, 1, "b01")[1]["params"]["Gain"]
+    assert obj["preset"]["params"]["activesnapshot"] == 1
+    assert pv["value"] == 0.9                                  # value now Lead's
+
+
+def test_set_active_snapshot_rejects_unconfigured():
+    import pytest
+    from helix_stadium_mcp.preset import set_active_snapshot
+    with pytest.raises(ValueError):
+        set_active_snapshot(_gen_preset(), 5)                  # slot 5 not valid
+
+
+def test_configure_snapshots_reshapes_existing_automation():
+    from helix_stadium_mcp.preset import configure_snapshots, edit_param, find_block
+    obj = _gen_preset()
+    configure_snapshots(obj, ["Rhythm", "Lead", "Clean"])
+    edit_param(obj, 1, "b01", "Gain", 0.9, snapshot=2)         # Clean=0.9
+    configure_snapshots(obj, ["Rhythm", "Lead"])               # shrink to 2 scenes
+    pv = find_block(obj, 1, "b01")[1]["params"]["Gain"]
+    assert pv["snapshots"][2] is None                          # unused slot nulled
+    assert pv["snapshots"][:2] == [0.5, 0.5]
+
+
+def test_configure_snapshots_resets_active_if_invalidated():
+    from helix_stadium_mcp.preset import configure_snapshots, set_active_snapshot
+    obj = _gen_preset()
+    configure_snapshots(obj, ["Rhythm", "Lead", "Clean"])
+    set_active_snapshot(obj, 2)                                # active = Clean
+    configure_snapshots(obj, ["Rhythm", "Lead"])              # Clean now invalid
+    assert obj["preset"]["params"]["activesnapshot"] == 0     # reset to a valid scene

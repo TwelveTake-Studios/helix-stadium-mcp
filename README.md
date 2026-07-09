@@ -2,10 +2,11 @@
 
 Work with your Line 6 Helix Stadium presets in plain language, without knowing the technical details.
 
-Point your AI assistant at a `.hsp` preset and ask what it does, or how two snapshots differ. You
-get a plain-English answer with real values (dB, Hz, ms) instead of raw parameter numbers. It's an
-[MCP](https://modelcontextprotocol.io) server, so it runs in any MCP client (Claude Desktop, Cursor,
-VS Code, and others).
+Point your AI assistant at a `.hsp` preset and ask what it does, how two snapshots differ, or to
+change it — brighten the lead, add a reverb, set up Rhythm / Lead / Clean snapshots. You get
+plain-English answers with real values (dB, Hz, ms) instead of raw parameter numbers, and any edits
+are written back safely. It's an [MCP](https://modelcontextprotocol.io) server, so it runs in any MCP
+client (Claude Desktop, Cursor, VS Code, and others).
 
 ## Example
 
@@ -26,18 +27,21 @@ Snapshots: 1. Rhythm (blue), 2. Lead (red)
 Friendly model names, on/off state (and which snapshots switch it), and every parameter in the
 units you'd read off the hardware.
 
-Because it understands the whole patch, it also **walks you through changes**: ask how to brighten
-the lead or get more gain, and it points you to the exact block and parameter to move, which you
-apply in your editor. Making those edits for you is coming in v0.2 (see the roadmap).
+Because it understands the whole patch, it can also **change it for you**. Ask for more gain on the
+lead or a touch more reverb, and it edits the exact block and parameter — then writes the result back
+through a safety check (validate → byte-exact round-trip → atomic write with a backup). It can also
+build a preset from scratch, set up snapshots, and assemble a setlist.
 
 ## Try asking
 
 - *"What does this preset do?"*
 - *"What's different between my Rhythm and Lead snapshots?"*
-- *"What amp and cab is this patch using, and how hard is the drive pushing?"*
-- *"How do I get more gain out of the Lead tone without it getting louder?"*
+- *"Add a Plate reverb after the amp and set the mix to 20%."*
+- *"Give the Lead snapshot more gain without making it louder."*
+- *"Set up Rhythm, Lead, and Clean snapshots on this preset."*
+- *"Build me a clean preset with a US Deluxe amp, a 1x12 cab, and a spring reverb."*
 - *"Find me a plexi-style amp."*  /  *"List every delay model."*
-- *"Is this preset valid?"*
+- *"Turn these presets into a setlist for Friday's gig."*
 
 ## What it does
 
@@ -45,8 +49,15 @@ apply in your editor. Making those edits for you is coming in v0.2 (see the road
 - **Explains** a preset in plain English — the full signal chain of each path with friendly model
   names, on/off state, per-snapshot & footswitch tags, and parameters in real units (dB, Hz, ms, %).
 - **Diffs snapshots** — exactly what changes between two snapshots (e.g. Rhythm vs Lead), in real units.
+- **Edits** — change parameters in real units, toggle or add / remove / reorder blocks, rename, and
+  set up snapshots, in plain language. Any model in your catalog can be added at its factory defaults.
+- **Creates** — start a new preset from scratch and build it up block by block.
+- **Assembles setlists** — order a batch of presets into a setlist with a pre-gig checklist.
 - **Browses** the model catalog (list / describe / search models).
 - **Validates** a preset's structure (and, with the catalog, its model ids and controller sources).
+
+Every change is written back through a safety gate — validate → round-trip → atomic write with a
+`.bak` backup — and `HELIX_MCP_READONLY` keeps the server read-only whenever you want it.
 
 ## Install & configure
 
@@ -70,7 +81,12 @@ Add it to your MCP client's config. Most use an `mcpServers` block:
 If the catalog isn't auto-detected, set `HELIX_STADIUM_RES` to your install's `res/` folder (the one
 containing `P35ModelCatalog.json`). Check detection with `helix-stadium-mcp doctor`.
 
+To keep the server read-only — for instance when you point it at presets you don't fully trust — set
+`HELIX_MCP_READONLY=1`, and the write tools are left out at startup.
+
 ## Tools
+
+**Read**
 
 | Tool | What you'd ask it |
 |---|---|
@@ -81,16 +97,31 @@ containing `P35ModelCatalog.json`). Check detection with `helix-stadium-mcp doct
 | `validate_preset` | Check a preset's structure |
 | `detect_install` | Find the Helix Stadium catalog this reads from |
 
+**Edit & build**
+
+| Tool | What you'd ask it |
+|---|---|
+| `edit_param` | Set a parameter, by current value or for a specific snapshot |
+| `add_block` · `remove_block` · `move_block` | Add, remove, or reorder a block |
+| `toggle_block` | Turn a block on/off — globally or per snapshot |
+| `configure_snapshots` · `set_active_snapshot` | Name the scenes and pick the active one |
+| `rename_preset` · `rename_snapshot` | Rename the preset or a snapshot |
+| `create_preset` | Start a new blank preset to build up |
+| `build_setlist` | Assemble ordered presets into a setlist + checklist |
+
+Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to leave them out.
+
 ## Roadmap
 
 Pre-1.0, following [semantic versioning](https://semver.org) — the tool surface can still change
 between minor versions.
 
-- **v0.1 (now)** — read, explain & compare presets; browse the model catalog; validate a preset.
-  The assistant understands your patch well enough to **talk you through** changes you make yourself.
-- **v0.2** — the assistant makes the changes **for** you: change parameters, toggle/add/remove/reorder
-  blocks, rename, and manage snapshots, in plain language.
-- **v0.3** — generate presets from a description, and assemble setlists.
+- **v0.1** — read, explain & compare presets; browse the model catalog; validate a preset.
+- **v0.2 (now)** — the assistant makes changes **for** you: edit parameters, toggle / add / remove /
+  reorder blocks, rename, and set up snapshots; build a preset from scratch; and assemble setlists —
+  in plain language. Every write goes through a safety gate, with `HELIX_MCP_READONLY` to keep it
+  read-only on demand.
+- **v0.3** — generate a whole preset from a description.
 - **v1.0** — a stable tool surface.
 
 macOS support is in progress alongside Windows.
@@ -98,7 +129,7 @@ macOS support is in progress alongside Windows.
 ## Requirements
 
 - **Helix Stadium** installed (Windows confirmed; macOS support in progress). The server reads the
-  model catalog from your own install at runtime.
+  model catalog and per-model definitions from your own install at runtime.
 - Python 3.10+.
 
 ## Trademarks

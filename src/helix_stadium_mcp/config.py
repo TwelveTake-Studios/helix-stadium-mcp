@@ -1,7 +1,7 @@
 """Locate the user's Helix Stadium ``res/`` catalog directory.
 
 Resolution order: explicit path -> ``HELIX_STADIUM_RES`` env var -> platform
-auto-detect. We NEVER bundle the catalog; it is read from the user's own install.
+auto-detect. The catalog is read from the user's own install at runtime.
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ _WINDOWS = [
     r"C:\Program Files (x86)\Line6\Helix Stadium\res",
     r"C:\Program Files\Line6\Helix Stadium\res",
 ]
-# UNVERIFIED — needs confirmation on a real Mac (see docs/DECISIONS-NEEDED.md #4).
+# UNVERIFIED — needs confirmation on a real Mac.
 _MACOS = [
     "/Applications/Helix Stadium.app/Contents/Resources/res",
     "/Applications/Line 6/Helix Stadium.app/Contents/Resources/res",

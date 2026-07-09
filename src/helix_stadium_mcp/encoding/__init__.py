@@ -10,8 +10,7 @@ Then ``format``/``formatUnits`` (a printf string or a list of display-value band
 produces the human readout.
 
 NOTE (v1 scope): band-format + the common domains are handled; a few exotic
-control-types still fall back to a plain rounded number. Full coverage is tracked
-in docs/OPEN-QUESTIONS.md.
+control-types still fall back to a plain rounded number.
 """
 from __future__ import annotations
 
@@ -61,6 +60,56 @@ def _apply_format(fmt, num) -> str | None:
         except (TypeError, ValueError):
             return fmt  # literal label with no % specifier (e.g. "Off", "Center")
     return None
+
+
+def _enum_index(labels, display):
+    """Resolve an enum display (label str, index, or bool) to its integer index."""
+    if isinstance(display, bool):
+        return 1 if display else 0
+    if isinstance(display, (int, float)):
+        i = int(display)
+        if 0 <= i < len(labels):
+            return i
+        raise ValueError(f"enum index {i} out of range [0, {len(labels) - 1}]")
+    for i, lab in enumerate(labels):
+        if str(lab).lower() == str(display).strip().lower():
+            return i
+    raise ValueError(f"{display!r} is not a valid option; choices: {list(labels)}")
+
+
+def stored_value(catalog, model_id: str, param_id: str, display):
+    """Inverse of :func:`display_string`: a real-units display value -> stored value.
+
+    ``display`` is a number in the param's BASE display units (Hz not kHz, dB, ms,
+    %, the ×scale display value), or an enum label (str) / index (int) / bool.
+    Returns a float for continuous params, an int for enums, a bool for booleans.
+    Raises ValueError rather than guess-and-write — fail loud, don't guess."""
+    pdef = catalog.param_def(model_id, param_id)
+    tag = pdef.get("display_tag") if pdef else None
+
+    if isinstance(tag, list):                       # inline-enum tag
+        return _enum_index(tag, display)
+
+    ctrl = catalog.controls.get(tag) if isinstance(tag, str) else None
+    if not ctrl:
+        if isinstance(display, bool):
+            return display
+        if isinstance(display, (int, float)):
+            return float(display)
+        raise ValueError(f"cannot set {model_id}.{param_id}: unknown control {tag!r}")
+
+    fmt = ctrl.get("format")
+    if isinstance(fmt, list) and fmt and isinstance(fmt[0], str):   # enum-as-format-list
+        return _enum_index(fmt, display)
+
+    num = float(display)
+    scale = ctrl.get("dspToDisplayScale")
+    if scale is not None:                            # domain A
+        return num / scale
+    if "minDisplayValue" in ctrl and "maxDisplayValue" in ctrl:    # domain B
+        mn, mx = ctrl["minDisplayValue"], ctrl["maxDisplayValue"]
+        return (num - mn) / (mx - mn) if mx != mn else num
+    return num                                       # domain C (identity/real units)
 
 
 def sync_note_label(catalog, index) -> str | None:

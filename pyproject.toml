@@ -1,10 +1,11 @@
 # pyproject.toml — twelvetake-helix-stadium-mcp (the MCP server).
 #
 # Distribution name is brand-prefixed (twelvetake-…); the import package stays
-# `helix_stadium_mcp` and the console script stays `helix-stadium-mcp`, mirroring
-# the reaper-mcp / gimp-mcp convention.
+# `helix_stadium_mcp` and the console script stays `helix-stadium-mcp` (a brand-prefixed
+# distribution with an unprefixed import package and console script).
 #
-# Reads the model catalog from the user's own installed Helix Stadium at runtime.
+# Reads the model catalog and per-model definitions from the user's own installed
+# Helix Stadium at runtime; every write goes through a validate/round-trip safety gate.
 # Trademark/affiliation notice lives in the README Trademarks section.
 
 [build-system]
@@ -13,8 +14,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "twelvetake-helix-stadium-mcp"
-version = "0.1.1"
-description = "Read and explain Line 6 Helix Stadium (.hsp) presets in plain language — an MCP server."
+version = "0.2.0"
+description = "Read, explain, edit, and build Line 6 Helix Stadium (.hsp) presets in plain language — an MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

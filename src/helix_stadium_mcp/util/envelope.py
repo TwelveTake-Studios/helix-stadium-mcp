@@ -2,13 +2,13 @@
 
 Shape: ``{ok, data, summary, warnings, error}``. Tools never raise across the
 transport — failures come back as ``err(code, message)`` so the client sees a
-clean, typed result. Mirrors the reaper/gimp servers' structured-return style.
+clean, typed result.
 """
 from __future__ import annotations
 
 from typing import Any
 
-# Stable, typed error codes (see spec/04 §result envelope).
+# Stable, typed error codes.
 INSTALL_NOT_FOUND = "INSTALL_NOT_FOUND"
 PARSE_ERROR = "PARSE_ERROR"
 NOT_FOUND = "NOT_FOUND"

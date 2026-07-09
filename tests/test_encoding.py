@@ -58,3 +58,38 @@ def test_enum_via_control_format_list():
     ctrl = {"format": ["Off", "Oct-", "Fifth", "Oct+", "Oct+5th", "Oct+7th", "2 Oct", "2 Oct+7th"]}
     cat = _cat("FeedbackType", "vic_feedback_type", ctrl)
     assert display_string(cat, "X", "FeedbackType", 7)[0] == "2 Oct+7th"
+
+
+# --- stored_value (inverse) -----------------------------------------------
+def test_stored_value_scale():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _cat("Drive", "generic_knob", {"dspToDisplayScale": 10, "format": "%.1f"})
+    assert stored_value(cat, "Amp", "Drive", 6.0) == 0.6
+
+
+def test_stored_value_identity():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _cat("HighCut", "freq", {"format": "%.0f Hz"})  # no scale -> identity
+    assert stored_value(cat, "EQ", "HighCut", 8000) == 8000.0
+
+
+def test_stored_value_enum_label_and_index():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _cat("Mode", ["Bass", "Guitar"])
+    assert stored_value(cat, "X", "Mode", "Guitar") == 1
+    assert stored_value(cat, "X", "Mode", 0) == 0
+
+
+def test_stored_value_roundtrips_display():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _cat("Drive", "generic_knob", {"dspToDisplayScale": 10, "format": "%.1f"})
+    s = stored_value(cat, "Amp", "Drive", 6.0)
+    assert display_string(cat, "Amp", "Drive", s)[0] == "6.0"
+
+
+def test_stored_value_bad_enum_raises():
+    import pytest
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _cat("Mode", ["Bass", "Guitar"])
+    with pytest.raises(ValueError):
+        stored_value(cat, "X", "Mode", "Banjo")

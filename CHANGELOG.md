@@ -6,6 +6,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-09
+
+The server can now **edit, create, and assemble** presets, not just read them — the tool
+surface grows from 8 read-only tools to 19. Every write goes through a validate →
+round-trip → atomic-write safety gate, and `HELIX_MCP_READONLY` keeps the server read-only
+when you want it. Default blocks and parameter ranges are synthesized from your own
+install's model definitions, so any model in the catalog can be added at its factory
+defaults.
+
+### Added
+- **Edit tools (9)** — `edit_param`, `toggle_block`, `add_block`, `remove_block`,
+  `move_block`, `rename_preset`, `rename_snapshot`, `configure_snapshots`, and
+  `set_active_snapshot`. Change parameters in real display units (e.g. `8000` for 8 kHz),
+  toggle or add / remove / reorder blocks, rename, and define / switch snapshots — all in
+  plain language.
+- **`create_preset`** — start a new blank preset (input → output, empty chain, 8 snapshots)
+  and build it up with the edit tools.
+- **`build_setlist`** — assemble a setlist from a list of presets. It validates every member
+  fail-closed (any invalid preset aborts the whole write) and emits order-numbered `.hsp`
+  copies, a `setlist.json`, and a `SETLIST.md` pre-gig checklist.
+- **Snapshot generation** — `configure_snapshots` names the scenes; `edit_param` and
+  `toggle_block` take a `snapshot` argument to store per-scene parameter and bypass values;
+  `set_active_snapshot` sets the scene the preset opens in. Build multi-snapshot presets
+  (e.g. Rhythm / Lead / Clean) end to end.
+- **Model definitions at runtime** — `add_block` synthesizes each block's full parameter
+  structure and factory defaults from your install's model definitions, reaching every model
+  in the catalog (amps, cabs, and effects alike). `describe_model` now reports each
+  parameter's default and valid range plus the model's DSP cost, and `edit_param` clamps
+  values to those ranges.
+
+### Changed
+- **The server is no longer read-only.** The package summary, README, and `SECURITY.md` now
+  describe the read / edit / build surface. `HELIX_MCP_READONLY` strips the write tools for
+  read-only deployments.
+
+### Security
+- **Every write is gated.** All writes funnel through a single `safe_write` path: structural
+  validation → byte-exact round-trip check → atomic replace with a `.bak` backup →
+  read-back. A failure at any step blocks the write; there is no override.
+- **`HELIX_MCP_READONLY`** removes all write tools at startup, so you can point the agent at
+  untrusted content and keep the server strictly read-only. This resolves the "future write
+  tool" caveat noted in 0.1.x — with the toggle set, prompt injection cannot be steered into
+  an unwanted write.
+- The server still runs over stdio, opens no listening socket, and transmits nothing about
+  your install.
+
 ## [0.1.1] - 2026-07-04
 
 Documentation and packaging patch. No functional or API changes; the tool surface is
@@ -69,6 +115,7 @@ the user's own installed Helix Stadium.
   planned `HELIX_MCP_READONLY` toggle will keep the server read-only even after write
   tools land. The threat model is documented in `SECURITY.md`.
 
-[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/releases/tag/v0.1.0

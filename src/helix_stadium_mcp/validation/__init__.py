@@ -3,7 +3,7 @@
 v1 scope: structural integrity (shape, snapshot-array lengths, block positions)
 plus catalog checks (model ids resolve) when a catalog is supplied. Deeper
 stage-safety checks (value-in-range, source-reference integrity, routing) land in
-a later phase — see docs/spec/07-safety-validation.md.
+a later phase.
 """
 from __future__ import annotations
 

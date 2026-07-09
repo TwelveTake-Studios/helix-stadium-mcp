@@ -16,10 +16,12 @@ env/
 *.hss
 *.hls
 *.hsf
+# safe_write leaves a <preset>.bak next to every write — a preset copy, same rule
+*.bak
 
-# Line 6 catalog copy — a regenerable straight copy from the book project; dev-only,
-# do NOT version it (avoids committing Line 6 copyrighted content even privately).
-reference/editor-help/
+# Line-6-derived reference data (catalog copy, harvested model defaults) — regenerable,
+# dev-only; never versioned or published (keeps Line 6-derived values out of git entirely).
+reference/
 
 # OS / editor
 .DS_Store
