@@ -8,6 +8,30 @@ tool results rather than crashes.
 from __future__ import annotations
 
 
+# Guidance handed to any MCP client/assistant using this server. Keeps an assistant from
+# misdescribing the tool (these are Helix Stadium presets, not the older Helix line / HX Edit)
+# and from offloading edits to manual work when a tool doesn't cover something.
+INSTRUCTIONS = """\
+Helix Stadium MCP reads, edits, creates, and assembles Line 6 Helix Stadium presets
+(.hsp files). A preset is a JSON document; every change is written through a safety gate
+(validate -> byte-exact round-trip -> atomic write with a .bak backup). The model catalog
+and per-model definitions are read from the user's own Helix Stadium installation.
+
+Guidance for assistants using this server:
+- These presets are for the Line 6 Helix Stadium. They are NOT edited with "HX Edit" -- that
+  is the editor for the older Helix Floor / Rack / LT / Stomp / HX Effects line and does not
+  work with the Stadium.
+- Make edits with these tools. Do not tell the user to edit a preset by hand in a separate
+  application; performing the edit here is the point.
+- If a request is not covered by a tool, say plainly that the server does not support it yet
+  and offer the closest thing it can do. Do not invent a manual workaround and do not claim it
+  is impossible.
+- Block references (e.g. b04) and any footswitch/controller assignments come from read_preset;
+  parameter values are in real display units (dB, Hz, ms, %, or enum labels).
+- Every write keeps a .bak next to the file, so edits are recoverable.
+"""
+
+
 class HelixContext:
     """Lazily-loaded catalog access shared by all tools."""
 
@@ -30,7 +54,7 @@ def build_server(ctx: HelixContext | None = None):
 
     if ctx is None:
         ctx = HelixContext()
-    mcp = FastMCP("helix-stadium-mcp")
+    mcp = FastMCP("helix-stadium-mcp", instructions=INSTRUCTIONS)
     from . import tools
     report = tools.register_all(mcp, ctx)
     return mcp, ctx, report

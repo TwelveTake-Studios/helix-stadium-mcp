@@ -64,7 +64,44 @@ def render_param(catalog, model_id: str, pid: str, pv: dict, params: dict) -> st
     return display_string(catalog, model_id, pid, val)[0]
 
 
-def block_summary(catalog, blk: dict, max_params: int = 6) -> dict:
+def _controller_info(catalog, model_id: str, target: str, ctrl: dict, sources: dict) -> dict:
+    """Describe one footswitch/expression controller on a block: its target (``bypass`` or a
+    param id), the source id it's bound to, its behavior, and — for a parameter controller —
+    the sweep range in real display units."""
+    info = {
+        "target": target,
+        "source": ctrl.get("source"),
+        "behavior": ctrl.get("behavior"),
+    }
+    if ctrl.get("bypassed"):
+        info["assignment_disabled"] = True
+    src = sources.get(str(ctrl.get("source"))) if isinstance(sources, dict) else None
+    if isinstance(src, dict) and src.get("fs_label"):
+        info["label"] = src["fs_label"]
+    if target != "bypass":                       # parameter controller -> render its range
+        lo, hi = ctrl.get("min"), ctrl.get("max")
+        if isinstance(lo, (int, float)) and not isinstance(lo, bool):
+            info["min"] = display_string(catalog, model_id, target, lo)[0]
+        if isinstance(hi, (int, float)) and not isinstance(hi, bool):
+            info["max"] = display_string(catalog, model_id, target, hi)[0]
+    return info
+
+
+def _block_controllers(catalog, blk: dict, model_id: str, sources: dict) -> list[dict]:
+    """Every controller assignment on a block: the bypass footswitch (if any) plus any
+    per-parameter controllers (e.g. a momentary footswitch swelling a delay's Mix)."""
+    out = []
+    en = blk.get("@enabled") or {}
+    if isinstance(en.get("controller"), dict):
+        out.append(_controller_info(catalog, model_id, "bypass", en["controller"], sources))
+    for pid, pv in ((blk.get("slot") or [{}])[0].get("params") or {}).items():
+        if isinstance(pv, dict) and isinstance(pv.get("controller"), dict):
+            out.append(_controller_info(catalog, model_id, pid, pv["controller"], sources))
+    return out
+
+
+def block_summary(catalog, blk: dict, key: str | None = None, sources: dict | None = None,
+                  max_params: int = 6) -> dict:
     slot0 = (blk.get("slot") or [{}])[0]
     model = slot0.get("model", "?")
     state, tags = _block_state(blk, slot0)
@@ -78,11 +115,13 @@ def block_summary(catalog, blk: dict, max_params: int = 6) -> dict:
         if len(shown) >= max_params:
             break
     return {
+        "key": key,
         "type": blk.get("type", ""),
         "model": model,
         "name": catalog.friendly_name(model),
         "state": state,
         "tags": tags,
+        "controllers": _block_controllers(catalog, blk, model, sources or {}),
         "params": shown,
     }
 
@@ -91,9 +130,11 @@ def summarize(catalog, obj: dict) -> dict:
     meta = obj.get("meta", {})
     preset = obj.get("preset", {})
     p = preset.get("params", {})
+    sources = preset.get("sources", {})
     paths = []
     for path_obj in preset.get("flow", []):
-        blocks = [block_summary(catalog, blk) for _bkey, blk in ordered_blocks(path_obj)]
+        blocks = [block_summary(catalog, blk, key=bkey, sources=sources)
+                  for bkey, blk in ordered_blocks(path_obj)]
         paths.append(blocks)
     return {
         "name": meta.get("name"),
@@ -115,10 +156,18 @@ def explain_text(catalog, obj: dict) -> str:
     for pi, blocks in enumerate(s["paths"], start=1):
         lines.append(f"\n## Path {pi}")
         for b in blocks:
+            bkey = f"{b['key']} " if b.get("key") else ""
             tagstr = f"  [{', '.join(b['tags'])}]" if b["tags"] else ""
             pstr = ("  ·  " + " | ".join(f"{p['id']} {p['display']}" for p in b["params"])) \
                 if b["params"] else ""
-            lines.append(f"  [{b['type']}] {b['name']} — {b['state']}{tagstr}{pstr}")
+            lines.append(f"  {bkey}[{b['type']}] {b['name']} — {b['state']}{tagstr}{pstr}")
+            for c in b.get("controllers", []):
+                rng = f" [{c['min']}..{c['max']}]" if ("min" in c and "max" in c) else ""
+                lbl = f" '{c['label']}'" if c.get("label") else ""
+                dis = " (disabled)" if c.get("assignment_disabled") else ""
+                beh = c.get("behavior") or "controller"
+                lines.append(f"      ctrl: {beh} FS source {c['source']}{lbl}"
+                             f" -> {c['target']}{rng}{dis}")
     return "\n".join(lines)
 
 

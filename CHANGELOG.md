@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-10
+
+A read-clarity and guidance patch. No new tools; the write surface is unchanged.
+
+### Added
+- `read_preset` and `explain_preset` now show each block's key (e.g. `b06`) and its footswitch and
+  controller assignments — bypass switches (momentary or latching) and per-parameter controllers,
+  with their ranges in real units. When you ask for a change, the assistant can point to the exact
+  block, and it can tell you how your footswitches and expression controls are wired.
+
+### Changed
+- The server now ships built-in guidance for the assistant using it, so it makes edits directly
+  through the tools and says plainly when a request isn't supported yet.
+
 ## [0.2.0] - 2026-07-09
 
 The server can now **edit, create, and assemble** presets, not just read them — the tool
@@ -115,7 +129,8 @@ the user's own installed Helix Stadium.
   planned `HELIX_MCP_READONLY` toggle will keep the server read-only even after write
   tools land. The threat model is documented in `SECURITY.md`.
 
-[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/releases/tag/v0.1.0

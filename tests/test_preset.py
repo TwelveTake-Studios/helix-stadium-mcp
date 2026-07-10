@@ -78,6 +78,46 @@ def test_validate_source_reference():
     assert not any("not in preset.sources" in w for w in validate(obj)["warnings"])
 
 
+def _preset_with_controllers():
+    """A bypass footswitch on b01 and a momentary param controller (a 'bloom') on b02.Mix."""
+    snaps = [{"name": "A", "valid": True}] + [{"name": f"S{i}", "valid": False} for i in range(2, 9)]
+    return {
+        "meta": {"name": "C"},
+        "preset": {
+            "snapshots": snaps,
+            "sources": {"16843018": {"fs_label": "BLOOM", "fs_color": "auto"}},
+            "flow": [{
+                "b01": {
+                    "type": "fx", "position": 1,
+                    "@enabled": {"value": True, "controller": {
+                        "source": 16843015, "behavior": "momentary", "type": "targetbypass"}},
+                    "slot": [{"model": "AmpX", "params": {"Gain": {"value": 0.5}}}],
+                },
+                "b02": {
+                    "type": "fx", "position": 2, "@enabled": {"value": True},
+                    "slot": [{"model": "AmpX", "params": {"Mix": {"value": 0.03, "controller": {
+                        "source": 16843018, "behavior": "momentary", "type": "param",
+                        "min": 0.03, "max": 0.4}}}}],
+                },
+            }],
+        },
+    }
+
+
+def test_summary_exposes_block_keys_and_controllers():
+    from helix_stadium_mcp.preset import explain_text, summarize
+    obj = _preset_with_controllers()
+    blocks = summarize(FakeCatalog(), obj)["paths"][0]
+    assert [b["key"] for b in blocks] == ["b01", "b02"]                 # keys exposed, in order
+    assert blocks[0]["controllers"] == [                                # bypass footswitch on b01
+        {"target": "bypass", "source": 16843015, "behavior": "momentary"}]
+    c = blocks[1]["controllers"][0]                                     # the 'bloom' on b02.Mix
+    assert c["target"] == "Mix" and c["source"] == 16843018 and c["behavior"] == "momentary"
+    assert "min" in c and "max" in c and c["label"] == "BLOOM"          # range + sources label
+    txt = explain_text(FakeCatalog(), obj)
+    assert "b01 " in txt and "b02 " in txt and "ctrl:" in txt and "16843018" in txt
+
+
 _SYNC_NOTES = ["1/1", "1/2 Dotted", "1/2", "1/2 Triplet", "1/4 Dotted", "1/4",
                "1/4 Triplet", "1/8 Dotted", "1/8"]
 

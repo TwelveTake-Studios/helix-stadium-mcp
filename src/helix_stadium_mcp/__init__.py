@@ -7,7 +7,7 @@ atomic-write safety gate. Run the server with ``helix-stadium-mcp serve``.
 """
 from __future__ import annotations
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 DISCLAIMER = (
     "Not affiliated with or endorsed by Line 6 or Yamaha Guitar Group. "
