@@ -38,7 +38,7 @@ PEDALS = {"EXP1": EXP1, "EXP2": EXP2}
 
 # footswitch LED colors: the names next to the fs_color table in the editor binary.
 # NOT the snapshot color list (no orange: "orangel" left the CRUNCH LED blank, 2026-10-18).
-# "red" proven by capture 08; the rest unconfirmed on the unit.
+# "red" proven by capture 08, "blue" confirmed on the unit; the rest unconfirmed.
 COLORS = ("auto", "white", "red", "yellow", "green", "turquoise", "blue", "purple", "pink")
 
 
