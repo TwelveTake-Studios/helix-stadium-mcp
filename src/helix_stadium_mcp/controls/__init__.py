@@ -36,9 +36,10 @@ SWITCHES: dict[str, int] = {
 }
 PEDALS = {"EXP1": EXP1, "EXP2": EXP2}
 
-# the app's color list (res/strings appStrings_eng.json /snapshot/color/*); "red" PROVEN
-COLORS = ("auto", "white", "red", "oranged", "orangel", "yellow", "green", "bluel", "blue",
-          "violet", "pink", "off")
+# footswitch LED colors: the names next to the fs_color table in the editor binary.
+# NOT the snapshot color list (no orange: "orangel" left the CRUNCH LED blank, 2026-10-18).
+# "red" proven by capture 08; the rest unconfirmed on the unit.
+COLORS = ("auto", "white", "red", "yellow", "green", "turquoise", "blue", "purple", "pink")
 
 
 def _norm(name: str) -> str:

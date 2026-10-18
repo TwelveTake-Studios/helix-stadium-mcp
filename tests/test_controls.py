@@ -124,6 +124,8 @@ def test_switch_label_and_color():
     assert obj["preset"]["sources"][str(B2)]["fs_color"] == "red"
     with pytest.raises(ValueError):
         C.set_switch_look(obj, "B2", color="plaid")
+    with pytest.raises(ValueError):          # snapshot-only name: left the LED blank on the unit
+        C.set_switch_look(obj, "B2", color="orangel")
     with pytest.raises(KeyError):
         C.set_switch_look(obj, "TOE", label="x")                       # no strip on the toe
 
