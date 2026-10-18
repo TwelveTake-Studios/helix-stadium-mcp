@@ -155,8 +155,10 @@ class Unit:
         n = struct.unpack(">Q", self._read(8))[0] if flag & 0x02 else self._read(1)[0]
         return flag, self._read(n)
 
-    def call(self, addr: str, tags: str = "", *args):
-        """Send one request; return ``(replies, status)`` for this request id."""
+    def call(self, addr: str, tags: str = "", *args, reply: str = "/status"):
+        """Send one request and read until ``reply`` arrives for its id (edits end with
+        ``/status``; reads end with their own reply and send no status). Returns
+        ``(replies, last reply's args)``."""
         self.rid += 1
         rid = self.rid
         self._send(osc_encode(addr, "i" + tags, (rid, *args)))
@@ -168,21 +170,21 @@ class Unit:
             a, args_ = osc_decode(body)
             if not args_ or args_[0] != rid:
                 continue
-            if a == "/status":
-                return replies, args_[1:]
             replies.append((a, args_[1:]))
+            if a == reply:
+                return replies, args_[1:]
 
     # --- reads ----------------------------------------------------------------------------
 
     def edit_buffer(self) -> dict:
-        replies, _ = self.call("/EditBufferStateGet")
+        replies, _ = self.call("/EditBufferStateGet", reply="/getEditBufferState")
         for a, args in replies:
             if a == "/getEditBufferState":
                 return decode_blob(next(x for x in args if isinstance(x, bytes)))
         raise ConnectionError("unit did not return the current preset")
 
     def property(self, key: str):
-        replies, _ = self.call("/PropertyValueGet", "s", key)
+        replies, _ = self.call("/PropertyValueGet", "s", key, reply="/getPropertyValue")
         for a, args in replies:
             if a == "/getPropertyValue":
                 blob = next((x for x in args if isinstance(x, bytes)), None)
