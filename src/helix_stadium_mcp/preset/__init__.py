@@ -68,16 +68,22 @@ def _controller_info(catalog, model_id: str, target: str, ctrl: dict, sources: d
     """Describe one footswitch/expression controller on a block: its target (``bypass`` or a
     param id), the source id it's bound to, its behavior, and — for a parameter controller —
     the sweep range in real display units."""
+    from ..controls import control_name
     info = {
         "target": target,
         "source": ctrl.get("source"),
+        "control": control_name(ctrl.get("source")),
         "behavior": ctrl.get("behavior"),
     }
-    if ctrl.get("bypassed"):
+    # the unit writes bypassed:true on every new EXP param assignment, so it does not mean
+    # "disabled" there; only report it for bypass (footswitch) controllers
+    if ctrl.get("bypassed") and target == "bypass":
         info["assignment_disabled"] = True
     src = sources.get(str(ctrl.get("source"))) if isinstance(sources, dict) else None
     if isinstance(src, dict) and src.get("fs_label"):
         info["label"] = src["fs_label"]
+    if isinstance(src, dict) and src.get("fs_color", "auto") != "auto":
+        info["color"] = src["fs_color"]
     if target != "bypass":                       # parameter controller -> render its range
         lo, hi = ctrl.get("min"), ctrl.get("max")
         if isinstance(lo, (int, float)) and not isinstance(lo, bool):
@@ -144,7 +150,20 @@ def summarize(catalog, obj: dict) -> dict:
         "snapshots": [{"name": s.get("name"), "color": s.get("color")}
                       for s in valid_snapshots(obj)],
         "paths": paths,
+        "commands": _commands_summary(preset),
     }
+
+
+def _commands_summary(preset: dict) -> list[dict]:
+    """Command Center commands per footswitch: type, behavior and param values."""
+    from ..controls import control_name
+    out = []
+    for sid, cmds in sorted((preset.get("commands") or {}).items()):
+        for c in cmds:
+            out.append({"control": control_name(int(sid)) or sid, "ordinal": c.get("ordinal"),
+                        "type": c.get("type"), "behavior": c.get("behavior"),
+                        "params": {k: v.get("value") for k, v in (c.get("params") or {}).items()}})
+    return out
 
 
 def explain_text(catalog, obj: dict) -> str:
@@ -164,10 +183,17 @@ def explain_text(catalog, obj: dict) -> str:
             for c in b.get("controllers", []):
                 rng = f" [{c['min']}..{c['max']}]" if ("min" in c and "max" in c) else ""
                 lbl = f" '{c['label']}'" if c.get("label") else ""
+                col = f" ({c['color']})" if c.get("color") else ""
                 dis = " (disabled)" if c.get("assignment_disabled") else ""
                 beh = c.get("behavior") or "controller"
-                lines.append(f"      ctrl: {beh} FS source {c['source']}{lbl}"
+                who = c.get("control") or f"source {c['source']}"
+                lines.append(f"      ctrl: {beh} {who}{lbl}{col}"
                              f" -> {c['target']}{rng}{dis}")
+    if s["commands"]:
+        lines.append("\n## Command Center")
+        for c in s["commands"]:
+            ps = ", ".join(f"{k} {v}" for k, v in c["params"].items())
+            lines.append(f"  {c['control']} #{c['ordinal']}: {c['type']} ({c['behavior']}) · {ps}")
     return "\n".join(lines)
 
 

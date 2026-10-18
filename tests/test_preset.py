@@ -110,12 +110,12 @@ def test_summary_exposes_block_keys_and_controllers():
     blocks = summarize(FakeCatalog(), obj)["paths"][0]
     assert [b["key"] for b in blocks] == ["b01", "b02"]                 # keys exposed, in order
     assert blocks[0]["controllers"] == [                                # bypass footswitch on b01
-        {"target": "bypass", "source": 16843015, "behavior": "momentary"}]
+        {"target": "bypass", "source": 16843015, "control": "Stomp A8", "behavior": "momentary"}]
     c = blocks[1]["controllers"][0]                                     # the 'bloom' on b02.Mix
     assert c["target"] == "Mix" and c["source"] == 16843018 and c["behavior"] == "momentary"
     assert "min" in c and "max" in c and c["label"] == "BLOOM"          # range + sources label
     txt = explain_text(FakeCatalog(), obj)
-    assert "b01 " in txt and "b02 " in txt and "ctrl:" in txt and "16843018" in txt
+    assert "b01 " in txt and "b02 " in txt and "ctrl:" in txt and "Stomp A11" in txt
 
 
 _SYNC_NOTES = ["1/1", "1/2 Dotted", "1/2", "1/2 Triplet", "1/4 Dotted", "1/4",

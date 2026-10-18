@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Footswitch, expression-pedal, scribble-strip, snapshot-control and Command Center tools
+  (`assign_footswitch`, `assign_expression`, `unassign_controller`, `set_switch_label`,
+  `set_snapshot_bypass`, `set_param_snapshot_control`, `add_command`, `clear_commands`),
+  reverse-engineered from Helix Stadium XL firmware 1.4.0 exports. Replay tests check the
+  writer against the unit's own exports when they are present in `captures/`.
+- `explain_preset` names switches and pedals (Stomp A1, EXP1, TOE), shows labels / LED
+  colors, and lists Command Center commands.
+
+### Changed
+- Expression-pedal assignments are no longer reported as "disabled" (the unit sets
+  `bypassed: true` on every new pedal assignment).
+
+### Security
+- The write gate refuses to overwrite a read-only `.hsp` (protects exported originals).
+
 ## [0.2.1] - 2026-07-10
 
 A read-clarity and guidance patch. No new tools; the write surface is unchanged.
