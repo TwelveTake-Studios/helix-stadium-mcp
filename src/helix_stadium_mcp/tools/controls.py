@@ -87,8 +87,8 @@ def register(mcp, ctx) -> None:
     def set_switch_label(path: str, switch: str, label: str | None = None,
                          color: str | None = None, save_as: str | None = None) -> dict:
         """Set a footswitch's scribble-strip text and/or LED color. `switch` is A1..A12 or
-        B1..B12. Colors: auto, white, red, yellow, green, turquoise, blue, purple, pink
-        (there is no orange). An empty label goes back to the block's name."""
+        B1..B12. Colors: auto, white, red, orange, light orange, yellow, green, turquoise,
+        blue, purple, pink. An empty label goes back to the block's name."""
         def fn(obj, cat):
             src = C.set_switch_look(obj, switch, label, color)
             return ({"switch": switch, "label": src["fs_label"], "color": src["fs_color"]},

@@ -36,10 +36,13 @@ SWITCHES: dict[str, int] = {
 }
 PEDALS = {"EXP1": EXP1, "EXP2": EXP2}
 
-# footswitch LED colors: the names next to the fs_color table in the editor binary.
-# NOT the snapshot color list (no orange: "orangel" left the CRUNCH LED blank, 2026-10-18).
-# "red" proven by capture 08, "blue" confirmed on the unit; the rest unconfirmed.
-COLORS = ("auto", "white", "red", "yellow", "green", "turquoise", "blue", "purple", "pink")
+# footswitch LED colors. PROVEN: red (08), dkorange/ltorange/white (16); blue confirmed on
+# the unit; the rest unconfirmed. "orangel" (a snapshot color) leaves the LED blank.
+# ponytail: the picker's OFF swatch isn't mapped yet; needs an export with OFF set.
+COLORS = ("auto", "white", "red", "dkorange", "ltorange", "yellow", "green", "turquoise",
+          "blue", "purple", "pink")
+_COLOR_ALIASES = {"orange": "dkorange", "darkorange": "dkorange", "lightorange": "ltorange",
+                  "yelloworange": "ltorange", "amber": "ltorange"}
 
 
 def _norm(name: str) -> str:
@@ -166,7 +169,8 @@ def set_switch_look(obj: dict, switch: str, label: str | None = None,
     if label is not None:   # ponytail: no length cap; the unit's limit isn't known yet
         src["fs_label"] = label
     if color is not None:
-        c = color.strip().lower()
+        c = re.sub(r"[\s_\-]+", "", color.lower())
+        c = _COLOR_ALIASES.get(c, c)
         if c not in COLORS:
             raise ValueError(f"color must be one of: {', '.join(COLORS)}")
         src["fs_color"] = c

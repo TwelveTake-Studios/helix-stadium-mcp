@@ -4,7 +4,7 @@ Two layers:
 - synthetic presets (always run);
 - replay: apply the new edit to capture N-1 and require capture N, ignoring only fields
   shown to change on their own. Captures are user exports (never committed): put them in
-  ./captures as 00.hsp..15.hsp, else these skip.
+  ./captures as 00.hsp..16.hsp, else these skip.
 """
 import copy
 import os
@@ -126,6 +126,8 @@ def test_switch_label_and_color():
         C.set_switch_look(obj, "B2", color="plaid")
     with pytest.raises(ValueError):          # snapshot-only name: left the LED blank on the unit
         C.set_switch_look(obj, "B2", color="orangel")
+    assert C.set_switch_look(obj, "B2", color="Orange")["fs_color"] == "dkorange"      # PROVEN 16
+    assert C.set_switch_look(obj, "B2", color="light orange")["fs_color"] == "ltorange"
     with pytest.raises(KeyError):
         C.set_switch_look(obj, "TOE", label="x")                       # no strip on the toe
 
