@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import os
 
-from . import admin, edit, models, read, setlist
+from . import admin, controls, edit, models, read, setlist
 
 _READ_GROUPS = (read, models, admin)
-_WRITE_GROUPS = (edit, setlist)
+_WRITE_GROUPS = (edit, setlist, controls)
 
 
 def readonly() -> bool:

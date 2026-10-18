@@ -109,6 +109,20 @@ To keep the server read-only — for instance when you point it at presets you d
 | `create_preset` | Start a new blank preset to build up |
 | `build_setlist` | Assemble ordered presets into a setlist + checklist |
 
+**Footswitches, pedals & Command Center** (Helix Stadium XL, firmware 1.4)
+
+| Tool | What you'd ask it |
+|---|---|
+| `assign_footswitch` | Put a block (or a parameter, min/max) on Stomp A1–A12 / B1–B12 or the toe switch, latching or momentary |
+| `assign_expression` | Sweep a parameter from EXP 1 / EXP 2 between a min and max |
+| `unassign_controller` | Take a block or parameter off its switch / pedal |
+| `set_switch_label` | Scribble-strip text and LED color |
+| `set_snapshot_bypass` | Turn "Snapshots Set Bypass" on or off for a block |
+| `set_param_snapshot_control` | Make a parameter snapshot-controlled (or not) |
+| `add_command` · `clear_commands` | Command Center: MIDI, preset/snapshot and other commands on a switch |
+
+Every write tool takes an optional `save_as`, and a read-only `.hsp` is never overwritten.
+
 Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to leave them out.
 
 ## Roadmap

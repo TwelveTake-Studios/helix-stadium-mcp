@@ -75,6 +75,11 @@ def safe_write(obj: dict, target: str, catalog=None) -> dict:
     Raises :class:`WriteBlocked` (no override) on any error. Returns
     ``{ok, target, backup, warnings}`` on success.
     """
+    if os.path.exists(target) and not os.access(target, os.W_OK):
+        raise WriteBlocked({"phase": "protect", "message": "file is read-only (a protected "
+                            "original); write to a new file with save_as",
+                            "errors": [f"{target} is read-only"]})
+
     pre = validate(obj, catalog)
     if pre["errors"]:
         raise WriteBlocked({"phase": "validate", "message": f"{len(pre['errors'])} validation error(s)",
