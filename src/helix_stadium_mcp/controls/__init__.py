@@ -36,12 +36,12 @@ SWITCHES: dict[str, int] = {
 }
 PEDALS = {"EXP1": EXP1, "EXP2": EXP2}
 
-# footswitch LED colors. PROVEN: red (08), dkorange/ltorange/white (16); blue confirmed on
-# the unit; the rest unconfirmed. "orangel" (a snapshot color) leaves the LED blank.
-# ponytail: the picker's OFF swatch isn't mapped yet; needs an export with OFF set.
-COLORS = ("auto", "white", "red", "dkorange", "ltorange", "yellow", "green", "turquoise",
+# footswitch LED colors. PROVEN: red (08), dkorange/ltorange/white (16), none = OFF (17);
+# blue confirmed on the unit; the rest unconfirmed. "orangel" (a snapshot color) leaves
+# the LED blank.
+COLORS = ("auto", "none", "white", "red", "dkorange", "ltorange", "yellow", "green", "turquoise",
           "blue", "purple", "pink")
-_COLOR_ALIASES = {"orange": "dkorange", "darkorange": "dkorange", "lightorange": "ltorange",
+_COLOR_ALIASES = {"off": "none", "orange": "dkorange", "darkorange": "dkorange", "lightorange": "ltorange",
                   "yelloworange": "ltorange", "amber": "ltorange"}
 
 
