@@ -23,7 +23,8 @@ from ..preset import _ensure_snapshot_array, find_block
 
 # --- control ids -----------------------------------------------------------------------
 # PROVEN: page A ids 0x01010100+i and page B ids 0x01010200+i exist (12 each) in every
-# export; EXP 1 / EXP 2 pedals; one toe switch. INFERRED: index i == physical switch i+1.
+# export; EXP 1 / EXP 2 pedals; one toe switch. Index i == physical switch i+1
+# (confirmed on the unit for A1-A3 and B1, 2026-10-18).
 _PAGE_A, _PAGE_B = 0x01010100, 0x01010200
 EXP1, EXP2 = 0x01020100, 0x01020101
 TOE = 0x01010500
@@ -101,7 +102,7 @@ def _holder(obj: dict, path_num: int, block, target: str) -> tuple[dict, dict]:
 
 def assign_switch(obj: dict, path_num: int, block, switch: str, target: str = "bypass",
                   behavior: str = "latching", lo=None, hi=None) -> int:
-    """Put a block's bypass (PROVEN) or one of its params (INFERRED) on a footswitch.
+    """Put a block's bypass (PROVEN) or one of its params (confirmed on the unit) on a footswitch.
     Re-assigning replaces the holder's previous controller. Returns the source id."""
     if behavior not in ("latching", "momentary"):
         raise ValueError("behavior must be 'latching' or 'momentary'")
@@ -175,7 +176,7 @@ def set_switch_look(obj: dict, switch: str, label: str | None = None,
 
 def set_snapshot_control(obj: dict, path_num: int, block, target: str, enabled: bool) -> bool:
     """Turn snapshot control on/off for a block's bypass ("Snapshots Set Bypass", PROVEN
-    12->13: the per-snapshot array is removed) or a param (INFERRED: same array shape)."""
+    12->13: the per-snapshot array is removed) or a param (same array shape; confirmed on the unit via a per-snapshot Level)."""
     _blk, h = _holder(obj, path_num, block, target)
     if enabled:
         _ensure_snapshot_array(obj, h)

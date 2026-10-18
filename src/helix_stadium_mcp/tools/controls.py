@@ -44,8 +44,8 @@ def register(mcp, ctx) -> None:
         or TOE (the expression pedal's toe switch). `behavior` is latching or momentary.
         Several blocks can share one switch — call once per block. Without `param` the switch
         turns the block on/off; with `param` (plus `min`/`max` in display units) it flips that
-        parameter between the two values instead. UNVERIFIED on the unit so far: the A/B
-        number-to-physical-switch mapping, the toe switch, and `param` mode."""
+        parameter between the two values instead. Not yet confirmed on the unit: the toe
+        switch."""
         def fn(obj, cat):
             target = param or "bypass"
             lo = hi = None
@@ -110,9 +110,7 @@ def register(mcp, ctx) -> None:
     def set_param_snapshot_control(path: str, block: str, param: str, enabled: bool,
                                    path_num: int = 1, save_as: str | None = None) -> dict:
         """Make a parameter snapshot-controlled (each snapshot keeps its own value; set them
-        with edit_param's `snapshot` argument) or turn that off (one value for all).
-        UNVERIFIED on the unit so far: the stored shape is inferred from Snapshots Set
-        Bypass."""
+        with edit_param's `snapshot` argument) or turn that off (one value for all)."""
         def fn(obj, cat):
             C.set_snapshot_control(obj, path_num, block, param, enabled)
             return ({"block": block, "param": param, "snapshot_controlled": enabled},
@@ -126,8 +124,8 @@ def register(mcp, ctx) -> None:
         MIDI, PresetSnapshot, Song, Looper, Utility, ExtAmp, HotKey. `params` is a JSON object
         of that type's settings by name, e.g. for MIDI `{"MIDI Ch": 2, "Command": 1, "CC#": 13,
         "Value": 127}`; unset ones take Line 6's defaults and every value is range-checked
-        against your install. Option numbers (Command, Action) are raw. UNVERIFIED on the unit
-        so far: types other than MIDI and PresetSnapshot, and more than one command per
+        against your install. Option numbers (Command, Action) are raw. Not yet confirmed on
+        the unit: types other than MIDI and PresetSnapshot, and more than one command per
         switch."""
         def fn(obj, cat):
             defs = C.load_command_defs(str(cat.res), int(obj["meta"]["device_id"]))
