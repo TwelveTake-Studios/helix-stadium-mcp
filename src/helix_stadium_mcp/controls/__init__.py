@@ -36,9 +36,9 @@ SWITCHES: dict[str, int] = {
 }
 PEDALS = {"EXP1": EXP1, "EXP2": EXP2}
 
-# footswitch LED colors. PROVEN: red (08), dkorange/ltorange/white (16), none = OFF (17);
-# blue confirmed on the unit; the rest unconfirmed. "orangel" (a snapshot color) leaves
-# the LED blank.
+# footswitch LED colors. PROVEN: red (08), dkorange/ltorange/white (16), none = OFF (17),
+# green/turquoise/blue (18), yellow/purple/pink (19): every swatch in the unit's picker.
+# "orangel" (a snapshot color) leaves the LED blank.
 COLORS = ("auto", "none", "white", "red", "dkorange", "ltorange", "yellow", "green", "turquoise",
           "blue", "purple", "pink")
 _COLOR_ALIASES = {"off": "none", "orange": "dkorange", "darkorange": "dkorange", "lightorange": "ltorange",

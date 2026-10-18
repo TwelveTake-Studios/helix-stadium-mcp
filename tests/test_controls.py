@@ -4,7 +4,7 @@ Two layers:
 - synthetic presets (always run);
 - replay: apply the new edit to capture N-1 and require capture N, ignoring only fields
   shown to change on their own. Captures are user exports (never committed): put them in
-  ./captures as 00.hsp..17.hsp, else these skip.
+  ./captures as 00.hsp..19.hsp, else these skip.
 """
 import copy
 import os
