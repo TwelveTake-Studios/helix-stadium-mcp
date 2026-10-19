@@ -124,9 +124,9 @@ def register(mcp, ctx) -> None:
         MIDI, PresetSnapshot, Song, Looper, Utility, ExtAmp, HotKey. `params` is a JSON object
         of that type's settings by name, e.g. for MIDI `{"MIDI Ch": 2, "Command": 1, "CC#": 13,
         "Value": 127}`; unset ones take Line 6's defaults and every value is range-checked
-        against your install. Option numbers (Command, Action) are raw. Not yet confirmed on
-        the unit: types other than MIDI and PresetSnapshot, and more than one command per
-        switch."""
+        against your install. Option numbers (Command, Action) are raw. All seven types, and
+        two commands on one switch, survive a round trip through the unit unchanged
+        (2026-10-18); that the unit then sends the right MIDI was not checked."""
         def fn(obj, cat):
             defs = C.load_command_defs(str(cat.res), int(obj["meta"]["device_id"]))
             cmd = C.add_command(obj, defs, switch, type, json.loads(params or "{}"), behavior)
