@@ -130,7 +130,9 @@ Every write tool takes an optional `save_as`, and a read-only `.hsp` is never ov
 | `live_read` | What's loaded on the unit right now: blocks, on/off, every parameter |
 | `live_set_param` | Turn a knob, flip a switch or pick a list setting (e.g. a cab mic) right now (per-snapshot values change the active snapshot) |
 | `live_toggle_block` | Turn a block on or off right now |
-| `live_add_block` | Add an effect to an empty spot (positions 1–12) |
+| `live_add_block` | Add an effect, amp (its cab comes with it), preamp or cab to an empty spot |
+| `live_move_block` · `live_remove_block` | Move a block (same path or the other one) or delete it |
+| `live_add_split` | Split a path into two lanes; the second lane is positions 15–26 |
 | `live_snapshot` | Switch the unit to snapshot 1–8 |
 | `live_list_presets` · `live_load_preset` | See the presets stored on the unit and load one |
 | `live_save_preset` | Save the changes over the loaded user preset (factory presets refused); reloads it to check |
