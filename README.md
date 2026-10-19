@@ -1,6 +1,9 @@
 # helix-stadium-mcp
 
-Work with your Line 6 Helix Stadium presets in plain language, without knowing the technical details.
+Helix Stadium MCP connects AI assistants to Line 6 Helix Stadium presets. It reads and explains
+existing presets, edits parameters, blocks and snapshots, and builds new presets from the models in
+your Helix Stadium installation. It validates every change and backs up the original file before
+writing.
 
 Point your AI assistant at a `.hsp` preset and ask what it does, how two snapshots differ, or to
 change it — brighten the lead, add a reverb, set up Rhythm / Lead / Clean snapshots. You get
@@ -50,7 +53,7 @@ build a preset from scratch, set up snapshots, and assemble a setlist.
   names, on/off state, per-snapshot & footswitch tags, and parameters in real units (dB, Hz, ms, %).
 - **Diffs snapshots** — exactly what changes between two snapshots (e.g. Rhythm vs Lead), in real units.
 - **Edits** — change parameters in real units, toggle or add / remove / reorder blocks, rename, and
-  set up snapshots, in plain language. Any model in your catalog can be added at its factory defaults.
+  set up snapshots. Any model in your catalog can be added at its factory defaults.
 - **Creates** — start a new preset from scratch and build it up block by block.
 - **Assembles setlists** — order a batch of presets into a setlist with a pre-gig checklist.
 - **Browses** the model catalog (list / describe / search models).
@@ -116,13 +119,16 @@ Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to
 Pre-1.0, following [semantic versioning](https://semver.org) — the tool surface can still change
 between minor versions.
 
-- **v0.1** — read, explain & compare presets; browse the model catalog; validate a preset.
-- **v0.2 (now)** — the assistant makes changes **for** you: edit parameters, toggle / add / remove /
-  reorder blocks, rename, and set up snapshots; build a preset from scratch; and assemble setlists —
-  in plain language. Every write goes through a safety gate, with `HELIX_MCP_READONLY` to keep it
-  read-only on demand.
-- **v0.3** — generate a whole preset from a description.
-- **v1.0** — a stable tool surface.
+- **v0.1:** Read, explain and compare presets; browse the model catalog; validate presets.
+- **v0.2 (current):** Edit parameters; add, remove, reorder and toggle blocks; rename presets and
+  snapshots; configure snapshots; build presets from scratch; assemble setlists. All writes pass
+  through a validation and backup gate, and `HELIX_MCP_READONLY` disables writing entirely.
+- **v0.3:** Footswitch assignment, block targeting by name, per-block and per-path DSP reporting,
+  and Helix Stadium Native support, including preset conversion between the Stadium and Native and
+  Stadium compatibility checks.
+- **v0.4:** Helix Stadium setlist files (`.hss`).
+- **v0.5:** Preset generation from a text description.
+- **v1.0:** A stable tool interface.
 
 macOS support is in progress alongside Windows.
 
