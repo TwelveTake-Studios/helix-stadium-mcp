@@ -22,13 +22,23 @@ PROVEN from the capture:
   /ParamValueSet     ,iiiiiii  a list-type param: the option index (capture 3: Trem note,
                              cab Mic)
   /GetContainerContents ,ii  [rid, container]  -1 factory, -2 user presets; raw MessagePack
+  /doAgenda          ,ib     [rid, MessagePack list of commands] (capture 4, the app driven
+                             by clicks): {cmnd 'movb', fl_s, bl_s, fl_d, bl_d} moves a block;
+                             {cmnd 'clrb', flow, bloc} deletes one; a Y split at position p is
+                             setm(bloc 27, P35_OutputMatrix, type 9) + setm(bloc p, SplitY,
+                             type 3) + {cmnd 'spld', flow, bloc p, bblk p+14}
+  /ModelSet on an amp: the unit adds a cab on its own (capture 4: US Double Black at 7, cab
+                             at 12). Positions 15-26 are the split's second lane.
 Blocks are addressed by POSITION, not id (capture 2: Clarity at position 9, id 10). An edit
 to a snapshot-controlled param changes the active snapshot's value (capture 2, Lead Level).
 Values are the same stored units as an .hsp file (Kinky Boost Drive 7 = 0.70).
 The edit buffer's ``cg__.asnp`` is the active snapshot (0-based). All four requests were
 run against the unit and read back (2026-10-18).
 
-Not proven, so refused: adding amps, cabs, I/O or B-lane blocks (see tools.live).
+Capture 5 (2026-10-18): input/output, replace in place, split type, FX loop and IR are all a
+plain ModelSet. A merge at p is setm(27 -> OutputNone, type 9) + setm(p -> Join, type 4) +
+{cmnd 'jono', bloc p, bblk p+14}; removing it is setm(27 -> OutputMatrix) + clrb p. Removing a
+split is setm(14 -> InputNone, type 8) + clrb at the split.
 """
 from __future__ import annotations
 
@@ -64,6 +74,8 @@ def osc_encode(addr: str, tags: str, args) -> bytes:
             out += struct.pack(">f", a)
         elif t == "s":
             out += _pad(a.encode())
+        elif t == "b":
+            out += struct.pack(">i", len(a)) + a + b"\0" * (-len(a) % 4)
         elif t not in "TF":                 # T/F carry no data: the tag is the value
             raise ValueError(f"unsupported OSC type {t!r}")
     return out
@@ -109,6 +121,27 @@ def _fourcc(o):
     if isinstance(o, list):
         return [_fourcc(x) for x in o]
     return o
+
+
+def pack(o) -> bytes:
+    """The little MessagePack the app sends in /doAgenda: lists, maps (keys sorted, like the
+    app), short strings and non-negative ints. Byte-identical to capture 4."""
+    if isinstance(o, list):
+        return bytes([0x90 | len(o)]) + b"".join(pack(x) for x in o)
+    if isinstance(o, dict):
+        return bytes([0x80 | len(o)]) + b"".join(pack(k) + pack(o[k]) for k in sorted(o))
+    if isinstance(o, str):
+        return bytes([0xA0 | len(o)]) + o.encode()
+    if 0 <= o < 0x80:
+        return bytes([o])
+    for tag, fmt, top in ((0xCC, ">B", 0xFF), (0xCD, ">H", 0xFFFF), (0xCE, ">I", 0xFFFFFFFF)):
+        if o <= top:
+            return bytes([tag]) + struct.pack(fmt, o)
+    raise ValueError("value too large")
+
+
+def cmd(code: str) -> int:
+    return struct.unpack(">I", code.encode())[0]
 
 
 def decode_blob(blob: bytes):
@@ -248,8 +281,15 @@ def free_position(eb: dict, path: int, position: int):
     """Block positions 1-12 and 15-26 hold effects (0/13/14/27 are the path's I/O)."""
     if not (1 <= position <= 12 or 15 <= position <= 26):
         raise ValueError("position must be 1-12 or 15-26")
-    if position in eb["sfg_"]["flow"][path - 1]["blks"][0::2]:
+    flow = eb["sfg_"]["flow"][path - 1]["blks"]
+    if position in flow[0::2]:
         raise ValueError(f"path {path} position {position} already has a block")
+    if position >= 15 and not has_split(eb, path):
+        raise ValueError(f"path {path} has no split, so positions 15-26 don't exist yet")
+
+
+def has_split(eb: dict, path: int) -> bool:
+    return any(b["type"] == 3 for b in eb["sfg_"]["flow"][path - 1]["blks"][1::2])
 
 
 def presets(raw: bytes) -> list[dict]:
