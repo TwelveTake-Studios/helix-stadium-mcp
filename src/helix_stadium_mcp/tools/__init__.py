@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import os
 
-from . import admin, controls, edit, models, read, setlist
+from . import admin, controls, edit, live, models, read, setlist
 
-_READ_GROUPS = (read, models, admin)
+_READ_GROUPS = (read, models, admin, live)   # live strips its own writes when read-only
 _WRITE_GROUPS = (edit, setlist, controls)
 
 

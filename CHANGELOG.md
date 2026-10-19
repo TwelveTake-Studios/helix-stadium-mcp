@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Live editing over the network (`live_read`, `live_set_param`, `live_toggle_block`,
+  `live_snapshot`): speaks the Helix Stadium app's own protocol (TCP 2002), reverse-engineered
+  from a capture of the app. Verified on a Stadium XL.
 - Footswitch, expression-pedal, scribble-strip, snapshot-control and Command Center tools
   (`assign_footswitch`, `assign_expression`, `unassign_controller`, `set_switch_label`,
   `set_snapshot_bypass`, `set_param_snapshot_control`, `add_command`, `clear_commands`),
