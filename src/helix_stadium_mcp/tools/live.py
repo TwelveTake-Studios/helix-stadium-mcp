@@ -228,10 +228,19 @@ def register(mcp, ctx) -> None:
                 if preset_id not in {p["id"] for p in before}:
                     raise ValueError("only your own (user) presets can be saved live")
                 want = L.flow_state(eb)
+                # re-check right before saving: a preset switched on the unit since the
+                # first check would otherwise be saved over this one
+                # ponytail: still a one-round-trip window; the protocol has no atomic check
+                if u.property("server.active.preset.id") != preset_id:
+                    raise ValueError("a different preset was loaded on the unit; nothing saved")
                 # the last two args are the block selected in the app; the input block
                 # (path 1 position 0) is always there
                 u.call("/SavePresetWithCID", "iii", preset_id, 0, 0)
                 after = user_presets(u)
+                # don't reload (which drops unsaved edits) if someone changed it meanwhile
+                if L.flow_state(u.edit_buffer()) != want:
+                    raise ValueError("the preset was changed on the unit during the save; "
+                                     "saved but not checked, check it on the unit")
                 u.call("/LoadPresetWithCID", "i", preset_id)
                 snap = eb["cg__"].get("asnp", 0)        # loading may land on another snapshot
                 u.call("/activateSnapshot", "i", snap)
