@@ -13,6 +13,8 @@ PROVEN from the capture:
   /activateSnapshot  ,ii     [rid, snapshot index]
   /EditBufferStateGet ,i     -> /getEditBufferState [rid, ?, blob]  (the live preset)
 Values are the same stored units as an .hsp file (Kinky Boost Drive 7 = 0.70).
+The edit buffer's ``cg__.asnp`` is the active snapshot (0-based). All four requests were
+run against the unit and read back (2026-10-18).
 
 Not proven, so refused rather than guessed (see ``check_target``): blocks whose position
 and id differ (the capture can't tell which one a message uses), non-float params,

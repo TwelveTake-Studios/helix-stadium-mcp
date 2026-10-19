@@ -123,6 +123,20 @@ To keep the server read-only â€” for instance when you point it at presets you d
 
 Every write tool takes an optional `save_as`, and a read-only `.hsp` is never overwritten.
 
+**Live editing** (no files: talks to the unit over your network, like the Helix Stadium app)
+
+| Tool | What you'd ask it |
+|---|---|
+| `live_read` | What's loaded on the unit right now: blocks, on/off, every parameter |
+| `live_set_param` | Turn a knob on the unit right now |
+| `live_toggle_block` | Turn a block on or off on the unit right now |
+| `live_snapshot` | Switch the unit to snapshot 1–8 |
+
+Set `HELIX_STADIUM_HOST` to the unit's network address. Live changes are not saved until
+you save on the unit. Each one is read back from the unit, and the preset and block are
+re-checked right before every change. Not supported yet: on/off-style and list-style
+parameters, snapshot-controlled parameters, path 2, and saving or loading presets.
+
 Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to leave them out.
 
 ## Roadmap

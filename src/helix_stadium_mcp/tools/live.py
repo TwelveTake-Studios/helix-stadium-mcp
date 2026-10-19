@@ -134,7 +134,9 @@ def register(mcp, ctx) -> None:
 
         def go():
             with L.Unit() as u:
-                _r, status = u.call("/activateSnapshot", "i", snapshot - 1)
-            return E.ok({"snapshot": snapshot, "status": status},
-                        summary=f"sent snapshot {snapshot}")
+                u.call("/activateSnapshot", "i", snapshot - 1)
+                now = u.edit_buffer()["cg__"].get("asnp")      # active snapshot, 0-based
+            if now != snapshot - 1:
+                raise ValueError("the unit did not switch snapshots")
+            return E.ok({"snapshot": snapshot}, summary=f"snapshot {snapshot} is active")
         return guarded(go)
