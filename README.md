@@ -128,14 +128,16 @@ Every write tool takes an optional `save_as`, and a read-only `.hsp` is never ov
 | Tool | What you'd ask it |
 |---|---|
 | `live_read` | What's loaded on the unit right now: blocks, on/off, every parameter |
-| `live_set_param` | Turn a knob on the unit right now |
-| `live_toggle_block` | Turn a block on or off on the unit right now |
+| `live_set_param` | Turn a knob or flip an on/off switch right now (per-snapshot values change the active snapshot) |
+| `live_toggle_block` | Turn a block on or off right now |
+| `live_add_block` | Add an effect to an empty spot (positions 1–12) |
 | `live_snapshot` | Switch the unit to snapshot 1–8 |
+| `live_list_presets` · `live_load_preset` | See the presets stored on the unit and load one |
 
 Set `HELIX_STADIUM_HOST` to the unit's network address. Live changes are not saved until
 you save on the unit. Each one is read back from the unit, and the preset and block are
-re-checked right before every change. Not supported yet: on/off-style and list-style
-parameters, snapshot-controlled parameters, path 2, and saving or loading presets.
+re-checked right before every change. Not supported yet: list-style settings (note values,
+mic choices), adding amps, cabs or B-lane blocks, and saving.
 
 Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to leave them out.
 
