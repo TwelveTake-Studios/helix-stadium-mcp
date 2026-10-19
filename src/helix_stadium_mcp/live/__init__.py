@@ -15,7 +15,8 @@ PROVEN from the capture:
   /ParamValueSet     ,iiiiiTi / ,iiiiiFi  an on/off param: the tag is the value
   /ModelSet          ,iiiii  [rid, flow, position, slot, model number]  (adds a block)
   /LoadPresetWithCID ,ii     [rid, preset content id]
-  /SavePresetWithCID ,iiii   [rid, content id, 1, 2]  (the app's save over the same preset)
+  /SavePresetWithCID ,iiii   [rid, content id, 1, 2]  NOT used: one capture can't tell
+                             whether 1, 2 are constants or the slot/container to save into
   /GetContainerContents ,ii  [rid, container]  -1 factory, -2 user presets; raw MessagePack
 Blocks are addressed by POSITION, not id (capture 2: Clarity at position 9, id 10). An edit
 to a snapshot-controlled param changes the active snapshot's value (capture 2, Lead Level).

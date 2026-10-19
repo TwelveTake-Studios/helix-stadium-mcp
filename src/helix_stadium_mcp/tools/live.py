@@ -48,7 +48,7 @@ def register(mcp, ctx) -> None:
             return fn()
         except (ConnectionError, OSError) as ex:
             return E.err(E.IO_ERROR, f"can't reach the unit: {ex}")
-        except (KeyError, ValueError) as ex:
+        except (KeyError, ValueError, IndexError) as ex:
             return E.err(E.VALUE_OUT_OF_RANGE, str(ex).strip("'\""))
 
     @mcp.tool(name="live_read")
@@ -173,14 +173,20 @@ def register(mcp, ctx) -> None:
     @mcp.tool(name="live_add_block")
     def live_add_block(preset_id: int, path: int, position: int, model: str) -> dict:
         """Add a block to an EMPTY spot on the unit right now (not saved until the user
-        saves). `model` is a model id from search_models (e.g. HD2_DistKinkyBoostMono);
-        `position` is 1-12 or 15-26 and must be free in live_read. It starts at the
+        saves). Effects only so far. `model` is a model id from search_models (e.g. HD2_DistKinkyBoostMono);
+        `position` is 1-12 and must be free in live_read. It starts at the
         model's default settings."""
         def go():
             md, names = _defs()
             rec = md.get(model)
             if not rec:
                 raise KeyError(f"unknown model {model!r}; use search_models")
+            # ponytail: only an effect on the main lane was captured; amps, cabs, I/O and the
+            # B lane (15-26, likely a split) need their own capture
+            if rec.get("category") in ("amp", "preamp", "cab_ir_interp") or model.startswith("P35_"):
+                raise ValueError("only effect blocks can be added live so far")
+            if not 1 <= position <= 12:
+                raise ValueError("live blocks can only be added at positions 1-12 so far")
             with L.Unit() as u:
                 eb = active(u, preset_id)
                 L.free_position(eb, path, position)
@@ -203,17 +209,4 @@ def register(mcp, ctx) -> None:
             if now != preset:
                 raise ValueError("the unit did not load that preset")
             return E.ok({"preset_id": now}, summary=f"preset {now} loaded")
-        return guarded(go)
-
-    @mcp.tool(name="live_save_preset")
-    def live_save_preset(preset_id: int) -> dict:
-        """Save the unit's current changes over the loaded preset (the same as Save on the
-        unit, same name and slot). This overwrites the stored preset: ask the user first.
-        `preset_id` must be the loaded preset's id from live_read."""
-        def go():
-            with L.Unit() as u:
-                active(u, preset_id)
-                _r, status = u.call("/SavePresetWithCID", "iii", preset_id, 1, 2)
-            return E.ok({"preset_id": preset_id, "status": status},
-                        summary=f"preset {preset_id} saved")
         return guarded(go)
