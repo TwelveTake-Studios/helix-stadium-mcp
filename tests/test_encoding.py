@@ -93,3 +93,62 @@ def test_stored_value_bad_enum_raises():
     cat = _cat("Mode", ["Bass", "Guitar"])
     with pytest.raises(ValueError):
         stored_value(cat, "X", "Mode", "Banjo")
+
+
+SAG_RIPPLE = {"minDisplayValue": -10, "maxDisplayValue": 10, "zeroValue": 0.0, "format": [
+    {"lowerBound": -99999, "upperBound": -0.05, "format": "%.1f", "formatUnits": "%.1f"},
+    {"lowerBound": -0.05, "upperBound": 0.05, "format": "%.0f", "formatUnits": "Stock"},
+    {"lowerBound": 0.05, "upperBound": 999999, "format": "%+.1f", "formatUnits": "%+.1f"},
+]}
+
+
+class RangedCatalog(FakeCatalog):
+    def __init__(self, params, controls, span):
+        super().__init__(params, controls)
+        self._span = span
+
+    def stored_range(self, model_id, param_id):
+        return self._span
+
+
+def _sag(span):
+    return RangedCatalog({"Sag": {"id": "Sag", "display_tag": "amp_sag_ripple"}},
+                         {"amp_sag_ripple": SAG_RIPPLE}, span)
+
+
+def test_domain_b_signed_stored_range_display():
+    cat = _sag((-1, 1))
+    shown = [display_string(cat, "Amp", "Sag", v)[0] for v in (0.0, -0.5, 0.2, -1.0, 1.0)]
+    assert shown == ["Stock", "-5.0", "+2.0", "-10.0", "+10.0"]
+
+
+def test_domain_b_signed_stored_range_inverse():
+    import pytest
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _sag((-1, 1))
+    assert stored_value(cat, "Amp", "Sag", 0) == pytest.approx(0.0)
+    assert stored_value(cat, "Amp", "Sag", -5.0) == pytest.approx(-0.5)
+    assert stored_value(cat, "Amp", "Sag", 2.0) == pytest.approx(0.2)
+    assert stored_value(cat, "Amp", "Sag", 10.0) == pytest.approx(1.0)
+
+
+def test_domain_b_signed_stored_range_roundtrips():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _sag((-1, 1))
+    for shown in ("-7.4", "Stock", "+3.6"):
+        num = 0.0 if shown == "Stock" else float(shown)
+        assert display_string(cat, "Amp", "Sag", stored_value(cat, "Amp", "Sag", num))[0] == shown
+
+
+def test_domain_b_unit_stored_range_on_same_control():
+    from helix_stadium_mcp.encoding import stored_value
+    cat = _sag((0, 1))
+    assert display_string(cat, "Amp", "Sag", 0.5)[0] == "Stock"
+    assert display_string(cat, "Amp", "Sag", 0.0)[0] == "-10.0"
+    assert stored_value(cat, "Amp", "Sag", 0) == 0.5
+
+
+def test_domain_b_without_stored_range_assumes_unit():
+    cat = RangedCatalog({"Sag": {"id": "Sag", "display_tag": "amp_sag_ripple"}},
+                        {"amp_sag_ripple": SAG_RIPPLE}, None)
+    assert display_string(cat, "Amp", "Sag", 0.5)[0] == "Stock"

@@ -4,7 +4,7 @@ A param's ``display_tag`` (from UIDefs) points to a P35Controls control-type OR 
 an inline enum list. Three stored-value domains, chosen by the control-type,
 never guessed:
   A  normalized x scale  (``dspToDisplayScale``)
-  B  bipolar normalized  (``min + stored*(max-min)`` via minDisplayValue/maxDisplayValue)
+  B  bipolar normalized  (the param's stored range mapped onto minDisplayValue..maxDisplayValue)
   C  real units          (identity)
 Then ``format``/``formatUnits`` (a printf string or a list of display-value bands)
 produces the human readout.
@@ -77,6 +77,12 @@ def _enum_index(labels, display):
     raise ValueError(f"{display!r} is not a valid option; choices: {list(labels)}")
 
 
+def _stored_span(catalog, model_id: str, param_id: str) -> tuple[float, float]:
+    fn = getattr(catalog, "stored_range", None)
+    span = fn(model_id, param_id) if callable(fn) else None
+    return span or (0.0, 1.0)
+
+
 def stored_value(catalog, model_id: str, param_id: str, display):
     """Inverse of :func:`display_string`: a real-units display value -> stored value.
 
@@ -108,7 +114,8 @@ def stored_value(catalog, model_id: str, param_id: str, display):
         return num / scale
     if "minDisplayValue" in ctrl and "maxDisplayValue" in ctrl:    # domain B
         mn, mx = ctrl["minDisplayValue"], ctrl["maxDisplayValue"]
-        return (num - mn) / (mx - mn) if mx != mn else num
+        lo, hi = _stored_span(catalog, model_id, param_id)
+        return round((lo * (mx - num) + hi * (num - mn)) / (mx - mn), 10) if mx != mn else num
     return num                                       # domain C (identity/real units)
 
 
@@ -143,7 +150,9 @@ def display_string(catalog, model_id: str, param_id: str, stored):
         if scale is not None:                                # domain A
             num = stored * scale
         elif "minDisplayValue" in ctrl and "maxDisplayValue" in ctrl:   # domain B
-            num = ctrl["minDisplayValue"] + stored * (ctrl["maxDisplayValue"] - ctrl["minDisplayValue"])
+            mn, mx = ctrl["minDisplayValue"], ctrl["maxDisplayValue"]
+            lo, hi = _stored_span(catalog, model_id, param_id)
+            num = mn + (stored - lo) / (hi - lo) * (mx - mn)
         else:                                                # domain C
             num = stored
         formatted = _apply_format(ctrl.get("formatUnits") or ctrl.get("format"), num)

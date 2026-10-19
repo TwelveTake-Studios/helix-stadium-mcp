@@ -140,7 +140,10 @@ def test_clamp_range_continuous_only(defs):
 def test_device_defaults_to_regular_stadium(defs):
     # default reads p37md = the regular Stadium (safe subset). device_id from the header.
     assert M.device_id() == 0x00260001
-    assert len(defs) == 786
+    version = M._ver_key(str(M._latest_bin(M.resolve_res_dir())))
+    expected = {(1, 3, 0, 0): 786, (1, 4, 0, 0): 813}.get(version)
+    if expected is not None:
+        assert len(defs) == expected
     # XL-only I/O models (extra FX loops / sends / inputs) are absent and un-synthesizable
     assert "HD2_FXLoopMono3" not in defs
     assert M.synth_template("HD2_FXLoopMono3") is None

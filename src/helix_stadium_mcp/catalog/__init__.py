@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 
 from ..config import resolve_res_dir
+from ..modeldefs import clamp_range
 
 
 def _load(res: Path, name: str):
@@ -64,6 +65,15 @@ class Catalog:
         for p in entry.get("params", []):
             if p.get("id") == param_id:
                 return p
+        return None
+
+    def stored_range(self, model_id: str, param_id: str) -> tuple[float, float] | None:
+        """A continuous param's stored ``(min, max)`` from the install's model defs."""
+        for mid in (model_id, self.stereo_base.get(model_id)):
+            if mid:
+                rng = clamp_range(mid, param_id, res_dir=self.res)
+                if rng is not None and rng[0] < rng[1]:
+                    return rng
         return None
 
     # -- browsing ----------------------------------------------------------
