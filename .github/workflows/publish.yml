@@ -12,7 +12,11 @@ permissions:
   contents: read
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   publish:
+    needs: ci
     runs-on: ubuntu-latest
     permissions:
       id-token: write        # required for PyPI Trusted Publishing (OIDC)
