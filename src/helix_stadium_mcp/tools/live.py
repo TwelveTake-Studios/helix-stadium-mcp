@@ -70,43 +70,72 @@ def register(mcp, ctx) -> None:
                         summary=f"preset {pid}: {len(blks)} block(s)")
         return guarded(go)
 
+    @mcp.tool(name="live_list_presets")
+    def live_list_presets() -> dict:
+        """The presets stored on the unit (user and factory), with the ids that
+        live_load_preset takes."""
+        def go():
+            out = {}
+            with L.Unit() as u:
+                for name, cont in (("user", -2), ("factory", -1)):
+                    replies, _ = u.call("/GetContainerContents", "i", cont,
+                                        reply="/GetContainerContents")
+                    raw = next(x for x in replies[-1][1] if isinstance(x, bytes))
+                    out[name] = L.presets(raw)
+            return E.ok(out, summary=f"{len(out['user'])} user, {len(out['factory'])} factory")
+        return guarded(go)
+
     if os.environ.get("HELIX_MCP_READONLY", "").strip().lower() in ("1", "true", "yes", "on"):
         return
 
-    def fresh(u, preset_id, path, position):
+    def active(u, preset_id):
         if u.property("server.active.preset.id") != preset_id:
             raise ValueError("a different preset is loaded on the unit now; read it again")
+        return u.edit_buffer()
+
+    def fresh(u, preset_id, path, position):
+        eb = active(u, preset_id)
         md, names = _defs()
-        return md, names, L.find(u.edit_buffer(), names, path, position)
+        return md, names, L.find(eb, names, path, position), eb
 
     @mcp.tool(name="live_set_param")
     def live_set_param(preset_id: int, path: int, position: int, model: str, param: str,
                        value: str) -> dict:
-        """Change one knob on the unit right now (not saved until the user saves on the
-        unit). `value` is in real units, e.g. `7` for Drive 7 or `35` for 35 %. Get the other
-        arguments from live_read. Only knob-style (continuous) parameters on path 1 are
-        supported so far; snapshot-controlled parameters are refused."""
+        """Change one knob or on/off switch on the unit right now (not saved until the user
+        saves). `value` is in real units, e.g. `7` for Drive 7, `35` for 35 %, `on`/`off`.
+        Get the other arguments from live_read. On a per-snapshot parameter this changes
+        the ACTIVE snapshot's value only (switch with live_snapshot first). List-type
+        settings (note values, mic choices) can't be changed live yet."""
         cat, e = _catalog(ctx)
         if e:
             return e
 
         def go():
             with L.Unit() as u:
-                md, names, blk = fresh(u, preset_id, path, position)
+                md, names, blk, eb = fresh(u, preset_id, path, position)
                 pid, pdef = _pid(md, model, param)
                 L.check_target(blk, model, pid, pdef)
-                v = float(stored_value(cat, model, param, _parse_value(value)))
-                if not pdef["min"] <= v <= pdef["max"]:
-                    raise ValueError(f"{param} must stay in its range")
+                v = stored_value(cat, model, param, _parse_value(value))
+                if pdef["type"] == "f":
+                    v = float(v)
+                    if not pdef["min"] <= v <= pdef["max"]:
+                        raise ValueError(f"{param} must stay in its range")
+                    tags, args = "iiiifi", (v,)
+                else:
+                    v = bool(v)
+                    tags, args = "iiii" + ("T" if v else "F") + "i", (v,)
                 before = blk["params"][pid]["value"]
-                u.call("/ParamValueSet", "iiiifi", path - 1, position, blk["slot"], pid, v, -1)
+                u.call("/ParamValueSet", tags, path - 1, position, blk["slot"], pid, *args, -1)
                 after = L.find(u.edit_buffer(), names, path, position)["params"][pid]["value"]
-            if abs(after - v) > 1e-4:
+            if after != v and not (isinstance(v, float) and abs(after - v) < 1e-4):
                 raise ValueError(f"the unit did not take the change ({param} still "
                                  f"{display_string(cat, model, param, after)[0]})")
             show = lambda x: display_string(cat, model, param, x)[0]
-            return E.ok({"param": param, "before": show(before), "after": show(after)},
-                        summary=f"{param}: {show(before)} -> {show(after)} (not saved)")
+            snap = blk["params"][pid]["snap"]
+            where = f" in snapshot {eb['cg__'].get('asnp', 0) + 1}" if snap else ""
+            return E.ok({"param": param, "before": show(before), "after": show(after),
+                         "snapshot": eb["cg__"].get("asnp", 0) + 1 if snap else None},
+                        summary=f"{param}: {show(before)} -> {show(after)}{where} (not saved)")
         return guarded(go)
 
     @mcp.tool(name="live_toggle_block")
@@ -116,7 +145,7 @@ def register(mcp, ctx) -> None:
         the unit). Get the arguments from live_read."""
         def go():
             with L.Unit() as u:
-                _md, names, blk = fresh(u, preset_id, path, position)
+                _md, names, blk, _eb = fresh(u, preset_id, path, position)
                 L.check_target(blk, model)
                 u.call("/BlockEnableSet", "iii", path - 1, position, int(on))
                 after = L.find(u.edit_buffer(), names, path, position)["enabled"]
@@ -139,4 +168,52 @@ def register(mcp, ctx) -> None:
             if now != snapshot - 1:
                 raise ValueError("the unit did not switch snapshots")
             return E.ok({"snapshot": snapshot}, summary=f"snapshot {snapshot} is active")
+        return guarded(go)
+
+    @mcp.tool(name="live_add_block")
+    def live_add_block(preset_id: int, path: int, position: int, model: str) -> dict:
+        """Add a block to an EMPTY spot on the unit right now (not saved until the user
+        saves). `model` is a model id from search_models (e.g. HD2_DistKinkyBoostMono);
+        `position` is 1-12 or 15-26 and must be free in live_read. It starts at the
+        model's default settings."""
+        def go():
+            md, names = _defs()
+            rec = md.get(model)
+            if not rec:
+                raise KeyError(f"unknown model {model!r}; use search_models")
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                L.free_position(eb, path, position)
+                u.call("/ModelSet", "iiii", path - 1, position, 0, rec["id"])
+                got = L.find(u.edit_buffer(), names, path, position)["model"]
+            if got != model:
+                raise ValueError("the unit did not add the block")
+            return E.ok({"path": path, "position": position, "model": model},
+                        summary=f"added {model} at path {path} position {position} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_load_preset")
+    def live_load_preset(preset: int) -> dict:
+        """Load a preset on the unit by its id from live_list_presets. Unsaved changes to
+        the current preset are LOST: ask the user before loading."""
+        def go():
+            with L.Unit() as u:
+                u.call("/LoadPresetWithCID", "i", preset)
+                now = u.property("server.active.preset.id")
+            if now != preset:
+                raise ValueError("the unit did not load that preset")
+            return E.ok({"preset_id": now}, summary=f"preset {now} loaded")
+        return guarded(go)
+
+    @mcp.tool(name="live_save_preset")
+    def live_save_preset(preset_id: int) -> dict:
+        """Save the unit's current changes over the loaded preset (the same as Save on the
+        unit, same name and slot). This overwrites the stored preset: ask the user first.
+        `preset_id` must be the loaded preset's id from live_read."""
+        def go():
+            with L.Unit() as u:
+                active(u, preset_id)
+                _r, status = u.call("/SavePresetWithCID", "iii", preset_id, 1, 2)
+            return E.ok({"preset_id": preset_id, "status": status},
+                        summary=f"preset {preset_id} saved")
         return guarded(go)

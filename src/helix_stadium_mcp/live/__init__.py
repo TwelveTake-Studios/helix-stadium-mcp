@@ -12,14 +12,19 @@ PROVEN from the capture:
   /ParamValueSet     ,iiiiifi [rid, flow, block, model slot, param id, value, -1]
   /activateSnapshot  ,ii     [rid, snapshot index]
   /EditBufferStateGet ,i     -> /getEditBufferState [rid, ?, blob]  (the live preset)
+  /ParamValueSet     ,iiiiiTi / ,iiiiiFi  an on/off param: the tag is the value
+  /ModelSet          ,iiiii  [rid, flow, position, slot, model number]  (adds a block)
+  /LoadPresetWithCID ,ii     [rid, preset content id]
+  /SavePresetWithCID ,iiii   [rid, content id, 1, 2]  (the app's save over the same preset)
+  /GetContainerContents ,ii  [rid, container]  -1 factory, -2 user presets; raw MessagePack
+Blocks are addressed by POSITION, not id (capture 2: Clarity at position 9, id 10). An edit
+to a snapshot-controlled param changes the active snapshot's value (capture 2, Lead Level).
 Values are the same stored units as an .hsp file (Kinky Boost Drive 7 = 0.70).
 The edit buffer's ``cg__.asnp`` is the active snapshot (0-based). All four requests were
 run against the unit and read back (2026-10-18).
 
-Not proven, so refused rather than guessed (see ``check_target``): blocks whose position
-and id differ (the capture can't tell which one a message uses), non-float params,
-snapshot-controlled params, and the second path. Saving and loading presets were not
-captured and are not implemented.
+Not proven, so refused rather than guessed (see ``check_target``): list-type (integer)
+params, which neither capture changed.
 """
 from __future__ import annotations
 
@@ -55,7 +60,7 @@ def osc_encode(addr: str, tags: str, args) -> bytes:
             out += struct.pack(">f", a)
         elif t == "s":
             out += _pad(a.encode())
-        else:
+        elif t not in "TF":                 # T/F carry no data: the tag is the value
             raise ValueError(f"unsupported OSC type {t!r}")
     return out
 
@@ -219,21 +224,31 @@ def find(eb: dict, names: dict, path: int, position: int, slot: int = 0) -> dict
 
 
 def check_target(blk: dict, expect_model: str, pid: int | None = None, pdef: dict | None = None):
-    """Refuse anything the capture didn't prove. Raises ValueError with the reason."""
+    """Refuse anything the captures didn't prove. Raises ValueError with the reason."""
     if blk["model"] != expect_model:
         raise ValueError(f"block is now {blk['model']}, not {expect_model}: the preset changed "
                          "on the unit; read it again")
-    if blk["path"] != 1:
-        raise ValueError("live edits on path 2 aren't proven yet")
-    if blk["position"] != blk["id"]:
-        raise ValueError("live edits on this block aren't proven yet (its position and id differ)")
     if pid is None:
         return
     p = blk["params"].get(pid)
     if p is None:
         raise KeyError("that parameter isn't on this block")
-    if p["snap"]:
-        raise ValueError("this parameter is snapshot-controlled; live snapshot values "
-                         "aren't proven yet")
-    if not pdef or pdef.get("type") != "f" or not isinstance(p["value"], float):
-        raise ValueError("only continuous (knob) parameters can be changed live so far")
+    kind = (pdef or {}).get("type")
+    if not ((kind == "f" and isinstance(p["value"], float))
+            or (kind == "b" and isinstance(p["value"], bool))):
+        raise ValueError("list-type settings (like a note value or mic choice) can't be "
+                         "changed live yet; knobs and on/off switches can")
+
+
+def free_position(eb: dict, path: int, position: int):
+    """Block positions 1-12 and 15-26 hold effects (0/13/14/27 are the path's I/O)."""
+    if not (1 <= position <= 12 or 15 <= position <= 26):
+        raise ValueError("position must be 1-12 or 15-26")
+    if position in eb["sfg_"]["flow"][path - 1]["blks"][0::2]:
+        raise ValueError(f"path {path} position {position} already has a block")
+
+
+def presets(raw: bytes) -> list[dict]:
+    """A /GetContainerContents blob (raw MessagePack, no tag) -> named entries."""
+    return [{"id": e["cid_"], "name": e["name"], "slot": e["posi"]}
+            for e in _fourcc(_unpack(raw, 0)[0]) if isinstance(e, dict) and e.get("name")]
