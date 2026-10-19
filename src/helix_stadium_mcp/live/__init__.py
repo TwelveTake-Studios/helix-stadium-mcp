@@ -15,8 +15,12 @@ PROVEN from the capture:
   /ParamValueSet     ,iiiiiTi / ,iiiiiFi  an on/off param: the tag is the value
   /ModelSet          ,iiiii  [rid, flow, position, slot, model number]  (adds a block)
   /LoadPresetWithCID ,ii     [rid, preset content id]
-  /SavePresetWithCID ,iiii   [rid, content id, 1, 2]  NOT used: one capture can't tell
-                             whether 1, 2 are constants or the slot/container to save into
+  /SavePresetWithCID ,iiii   [rid, content id, flow, position]: saves the edit buffer over
+                             that preset. The last two are the block selected in the app
+                             (capture 2: [241, 1, 2] after editing path 2 position 2;
+                             capture 3: [242, 0, 11] after editing path 1 position 11).
+  /ParamValueSet     ,iiiiiii  a list-type param: the option index (capture 3: Trem note,
+                             cab Mic)
   /GetContainerContents ,ii  [rid, container]  -1 factory, -2 user presets; raw MessagePack
 Blocks are addressed by POSITION, not id (capture 2: Clarity at position 9, id 10). An edit
 to a snapshot-controlled param changes the active snapshot's value (capture 2, Lead Level).
@@ -24,8 +28,7 @@ Values are the same stored units as an .hsp file (Kinky Boost Drive 7 = 0.70).
 The edit buffer's ``cg__.asnp`` is the active snapshot (0-based). All four requests were
 run against the unit and read back (2026-10-18).
 
-Not proven, so refused rather than guessed (see ``check_target``): list-type (integer)
-params, which neither capture changed.
+Not proven, so refused: adding amps, cabs, I/O or B-lane blocks (see tools.live).
 """
 from __future__ import annotations
 
@@ -235,10 +238,10 @@ def check_target(blk: dict, expect_model: str, pid: int | None = None, pdef: dic
     if p is None:
         raise KeyError("that parameter isn't on this block")
     kind = (pdef or {}).get("type")
-    if not ((kind == "f" and isinstance(p["value"], float))
-            or (kind == "b" and isinstance(p["value"], bool))):
-        raise ValueError("list-type settings (like a note value or mic choice) can't be "
-                         "changed live yet; knobs and on/off switches can")
+    v = p["value"]
+    if not ((kind == "f" and isinstance(v, float)) or (kind == "b" and isinstance(v, bool))
+            or (kind == "i" and isinstance(v, int) and not isinstance(v, bool))):
+        raise ValueError("this parameter's type isn't supported live")
 
 
 def free_position(eb: dict, path: int, position: int):
@@ -253,3 +256,11 @@ def presets(raw: bytes) -> list[dict]:
     """A /GetContainerContents blob (raw MessagePack, no tag) -> named entries."""
     return [{"id": e["cid_"], "name": e["name"], "slot": e["posi"]}
             for e in _fourcc(_unpack(raw, 0)[0]) if isinstance(e, dict) and e.get("name")]
+
+
+def flow_state(eb: dict):
+    """What a save must preserve: every block's model, on/off and param values."""
+    return [[(pos, blk["enbl"], [(m["id__"], [(q["pid_"], q["valu"]) for q in m["parm"]])
+                                for m in blk["mdls"]])
+             for pos, blk in zip(f["blks"][0::2], f["blks"][1::2], strict=True)]
+            for f in eb["sfg_"]["flow"]]
