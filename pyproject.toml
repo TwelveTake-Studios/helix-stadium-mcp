@@ -14,7 +14,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "twelvetake-helix-stadium-mcp"
-version = "0.2.2"
+version = "0.2.3"
 description = "Read, explain, edit, and build Line 6 Helix Stadium (.hsp) presets in plain language — an MCP server."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -59,6 +59,7 @@ Funding = "https://buymeacoffee.com/twelvetake"
 
 [project.scripts]
 helix-stadium-mcp = "helix_stadium_mcp.cli:main"
+twelvetake-helix-stadium-mcp = "helix_stadium_mcp.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/helix_stadium_mcp"]

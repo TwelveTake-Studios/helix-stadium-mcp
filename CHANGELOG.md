@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-19
+
+### Fixed
+- The README's setup command, `uvx twelvetake-helix-stadium-mcp@latest serve`, now starts the
+  server. The package provided only a `helix-stadium-mcp` command, so uvx could not find a program
+  under the package's own name. It now provides both.
+
 ## [0.2.2] - 2026-10-19
 
 ### Fixed
@@ -137,7 +144,8 @@ the user's own installed Helix Stadium.
   planned `HELIX_MCP_READONLY` toggle will keep the server read-only even after write
   tools land. The threat model is documented in `SECURITY.md`.
 
-[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.1.1...v0.2.0
