@@ -40,14 +40,24 @@ FLOAT = {"type": "f"}
 def test_guards():
     eb = _eb()
     drive = L.find(eb, NAMES, 1, 1)
-    L.check_target(drive, "Kinky", 1, FLOAT)                         # the proven case
+    L.check_target(drive, "Kinky", 1, FLOAT)                         # a knob
+    L.check_target(drive, "Kinky", 2, {"type": "b"})                 # an on/off switch
+    L.check_target(L.find(eb, NAMES, 1, 2), "Delay", 1, FLOAT)       # per-snapshot: active one
+    L.check_target(L.find(eb, NAMES, 1, 9), "Preamp", 1, FLOAT)      # addressed by position
+    L.check_target(L.find(eb, NAMES, 2, 0), "Kinky", 1, FLOAT)       # path 2
     with pytest.raises(ValueError, match="preset changed"):
         L.check_target(drive, "Delay", 1, FLOAT)
-    with pytest.raises(ValueError, match="knob"):
-        L.check_target(drive, "Kinky", 2, {"type": "b"})             # a switch param
-    with pytest.raises(ValueError, match="snapshot"):
-        L.check_target(L.find(eb, NAMES, 1, 2), "Delay", 1, FLOAT)
-    with pytest.raises(ValueError, match="position and id"):
-        L.check_target(L.find(eb, NAMES, 1, 9), "Preamp", 1, FLOAT)
-    with pytest.raises(ValueError, match="path 2"):
-        L.check_target(L.find(eb, NAMES, 2, 0), "Kinky", 1, FLOAT)
+    with pytest.raises(ValueError, match="list-type"):
+        L.check_target(drive, "Kinky", 1, {"type": "i"})
+
+
+def test_bool_tag_and_free_position():
+    # the app's own Boost-off frame (capture 2)
+    assert L.osc_encode("/ParamValueSet", "iiiiiFi", (106, 0, 1, 0, 2, False, -1)).hex() == (
+        "2f506172616d56616c756553657400002c69696969694669000000000000006a"
+        "00000000000000010000000000000002ffffffff")
+    eb = _eb()
+    L.free_position(eb, 1, 3)
+    for pos in (1, 13, 0):
+        with pytest.raises(ValueError):
+            L.free_position(eb, 1, pos)
