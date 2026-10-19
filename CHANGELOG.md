@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Live editing over the network (`live_read`, `live_set_param`, `live_toggle_block`,
   `live_snapshot`, `live_add_block`, `live_list_presets`, `live_load_preset`,
-  `live_save_preset`, `live_move_block`, `live_remove_block`, `live_add_split`; amps, cabs
+  `live_save_preset`, `live_move_block`, `live_remove_block`, `live_replace_block`, `live_set_io`,
+  `live_add_split`, `live_set_split_type`, `live_remove_split`, `live_add_merge`,
+  `live_remove_merge`; amps, cabs, IRs, FX loops, sends, returns
   and the second lane in `live_add_block`; list-type settings such as a cab mic or note value): speaks the Helix Stadium app's own protocol (TCP 2002), reverse-engineered
   from a capture of the app. Verified on a Stadium XL: `scripts/live_sweep.py` added all
-  731 effect/amp/preamp/cab models live and read every parameter back at its minimum, maximum
-  and default (6,938 parameters, no failures).
+  741 effect/amp/preamp/cab/IR/loop/send/return models live and read every parameter back at
+  its minimum, maximum and default (no failures); every input and output choice, all four split
+  types and the merge were checked the same way.
 - Footswitch, expression-pedal, scribble-strip, snapshot-control and Command Center tools
   (`assign_footswitch`, `assign_expression`, `unassign_controller`, `set_switch_label`,
   `set_snapshot_bypass`, `set_param_snapshot_control`, `add_command`, `clear_commands`),

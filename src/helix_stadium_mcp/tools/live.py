@@ -15,7 +15,7 @@ from ..util import envelope as E
 from .edit import _parse_value
 from .read import _catalog
 
-_FIXED = {"input", "output", "split", "join", "send", "return", "fxloop", "harness", "none", "ir"}
+_FIXED = {"input", "output", "split", "join", "harness", "none"}
 
 
 def _defs():
@@ -176,14 +176,14 @@ def register(mcp, ctx) -> None:
         return {(b["path"], b["position"]): b["model"] for b in L.blocks(eb, names) if b["slot"] == 0}
 
     def _movable(md, model):
-        # I/O, splits, merges, sends/returns and loops: not captured, or reach outside the unit
+        # I/O, splits and merges have their own tools
         if model.startswith(("P35_", "#")) or (md.get(model) or {}).get("category") in _FIXED:
             raise ValueError(f"{model} can't be added, moved or removed live")
 
     @mcp.tool(name="live_add_block")
     def live_add_block(preset_id: int, path: int, position: int, model: str) -> dict:
         """Add a block to an EMPTY spot on the unit right now (not saved until the user
-        saves): effects, amps, preamps or cabs. `model` is a model id from search_models
+        saves): effects, amps, preamps, cabs, IRs, FX loops, sends or returns. `model` is a model id from search_models
         (e.g. HD2_DistKinkyBoostMono). `position` is 1-12, or 15-26 on a path with a split
         (its second lane), and must be free in live_read. An amp brings its own cab: the
         unit adds it, and `added` lists every block that appeared."""
@@ -277,6 +277,157 @@ def register(mcp, ctx) -> None:
                 raise ValueError("the unit did not add the split")
             return E.ok({"path": path, "position": position},
                         summary=f"split path {path} at position {position}; second lane is 15-26 (not saved)")
+        return guarded(go)
+
+    def _setm(md, f, bloc, model, typ):
+        return {"cmnd": L.cmd("setm"), "flow": f, "bloc": bloc, "slot": 0,
+                "modl": md[model]["id"], "type": typ}
+
+    def _split_at(eb, names, path):
+        return next(((q, m) for (p, q), m in _where(eb, names).items()
+                     if p == path and m.startswith("P35_AppDSPSplit")), (None, None))
+
+    def _merge_at(eb, names, path):
+        return next((q for (p, q), m in _where(eb, names).items()
+                     if p == path and m == "P35_AppDSPJoin"), None)
+
+    @mcp.tool(name="live_replace_block")
+    def live_replace_block(preset_id: int, path: int, position: int, model: str,
+                           new_model: str) -> dict:
+        """Swap the block at a spot for a different model, in place, right now (not saved
+        until the user saves). Same models as live_add_block. The new block starts at its
+        default settings."""
+        def go():
+            md, names = _defs()
+            rec = md.get(new_model)
+            if not rec:
+                raise KeyError(f"unknown model {new_model!r}; use search_models")
+            _movable(md, new_model)
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                L.check_target(L.find(eb, names, path, position), model)
+                _movable(md, model)
+                u.call("/ModelSet", "iiii", path - 1, position, 0, rec["id"])
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, position)) != new_model:
+                raise ValueError("the unit did not replace the block")
+            return E.ok({"path": path, "position": position, "model": new_model},
+                        summary=f"{model} -> {new_model} at path {path} position {position} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_set_io")
+    def live_set_io(preset_id: int, path: int, end: str, model: str) -> dict:
+        """Change a path's input or output right now (not saved until the user saves).
+        `end` is `input` or `output`; `model` is a P35_Input... / P35_Output... id from
+        list_models (e.g. P35_InputInst1, P35_OutputQtrInch)."""
+        def go():
+            md, names = _defs()
+            if end not in ("input", "output") or (md.get(model) or {}).get("category") != end:
+                raise ValueError(f"{model} is not an {end} model")
+            if model in ("P35_OutputMatrix", "P35_OutputNone"):
+                raise ValueError(f"{model} is set by the split and merge tools")
+            pos = 0 if end == "input" else 13
+            with L.Unit() as u:
+                active(u, preset_id)
+                u.call("/ModelSet", "iiii", path - 1, pos, 0, md[model]["id"])
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, pos)) != model:
+                raise ValueError(f"the unit did not change the {end}")
+            return E.ok({"path": path, end: model}, summary=f"path {path} {end}: {model} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_set_split_type")
+    def live_set_split_type(preset_id: int, path: int, kind: str) -> dict:
+        """Change a path's split type right now (not saved until the user saves): `Y`,
+        `AB`, `XOver` (crossover) or `Dyn` (dynamic)."""
+        def go():
+            md, names = _defs()
+            model = f"P35_AppDSPSplit{kind}"
+            if model not in md:
+                raise ValueError("kind is Y, AB, XOver or Dyn")
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                pos, _ = _split_at(eb, names, path)
+                if pos is None:
+                    raise ValueError(f"path {path} has no split")
+                u.call("/ModelSet", "iiii", path - 1, pos, 0, md[model]["id"])
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, pos)) != model:
+                raise ValueError("the unit did not change the split")
+            return E.ok({"path": path, "position": pos, "model": model},
+                        summary=f"path {path} split is now {kind} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_add_merge")
+    def live_add_merge(preset_id: int, path: int, position: int) -> dict:
+        """Join a split path's two lanes back together at an EMPTY spot after the split,
+        right now (not saved until the user saves)."""
+        def go():
+            md, names = _defs()
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                sp, _ = _split_at(eb, names, path)
+                if sp is None or _merge_at(eb, names, path) is not None:
+                    raise ValueError(f"path {path} needs a split and no merge yet")
+                if not sp < position <= 12:
+                    raise ValueError(f"the merge goes after the split, at {sp + 1}-12")
+                L.free_position(eb, path, position)
+                if any(p == path and position + 14 <= q <= 26 for p, q in _where(eb, names)):
+                    raise ValueError("the second lane has blocks past that spot; move them first")
+                f = path - 1
+                # from capture 5: the lane's output goes to None, the join links bloc+14
+                u.call("/doAgenda", "b", L.pack([
+                    _setm(md, f, 27, "P35_OutputNone", 9), _setm(md, f, position, "P35_AppDSPJoin", 4),
+                    {"cmnd": L.cmd("jono"), "flow": f, "bloc": position, "bblk": position + 14}]))
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, position)) != "P35_AppDSPJoin":
+                raise ValueError("the unit did not add the merge")
+            return E.ok({"path": path, "position": position},
+                        summary=f"merged path {path} at position {position} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_remove_merge")
+    def live_remove_merge(preset_id: int, path: int) -> dict:
+        """Remove a path's merge right now (not saved until the user saves): the second lane
+        gets its own output again."""
+        def go():
+            md, names = _defs()
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                pos = _merge_at(eb, names, path)
+                if pos is None:
+                    raise ValueError(f"path {path} has no merge")
+                u.call("/doAgenda", "b", L.pack([
+                    _setm(md, path - 1, 27, "P35_OutputMatrix", 9),
+                    {"cmnd": L.cmd("clrb"), "flow": path - 1, "bloc": pos}]))
+                now = _where(u.edit_buffer(), names)
+            if (path, pos) in now or now.get((path, 27)) != "P35_OutputMatrix":
+                raise ValueError("the unit did not remove the merge")
+            return E.ok({"path": path}, summary=f"removed path {path}'s merge (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_remove_split")
+    def live_remove_split(preset_id: int, path: int) -> dict:
+        """Remove a path's split right now (not saved until the user saves). Refused while
+        the path has a merge or blocks in its second lane: remove those first."""
+        def go():
+            md, names = _defs()
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                pos, _ = _split_at(eb, names, path)
+                if pos is None:
+                    raise ValueError(f"path {path} has no split")
+                if _merge_at(eb, names, path) is not None:
+                    raise ValueError("remove the merge first (live_remove_merge)")
+                if any(p == path and 15 <= q <= 26 for p, q in _where(eb, names)):
+                    raise ValueError("the second lane still has blocks; move or remove them first")
+                u.call("/doAgenda", "b", L.pack([
+                    _setm(md, path - 1, 14, "P35_InputNone", 8),
+                    {"cmnd": L.cmd("clrb"), "flow": path - 1, "bloc": pos}]))
+                eb = u.edit_buffer()
+            if L.has_split(eb, path):
+                raise ValueError("the unit did not remove the split")
+            return E.ok({"path": path}, summary=f"removed path {path}'s split (not saved)")
         return guarded(go)
 
     @mcp.tool(name="live_load_preset")

@@ -35,7 +35,10 @@ Values are the same stored units as an .hsp file (Kinky Boost Drive 7 = 0.70).
 The edit buffer's ``cg__.asnp`` is the active snapshot (0-based). All four requests were
 run against the unit and read back (2026-10-18).
 
-Not proven, so refused: I/O blocks, merges, removing a split, replacing a block in place.
+Capture 5 (2026-10-18): input/output, replace in place, split type, FX loop and IR are all a
+plain ModelSet. A merge at p is setm(27 -> OutputNone, type 9) + setm(p -> Join, type 4) +
+{cmnd 'jono', bloc p, bblk p+14}; removing it is setm(27 -> OutputMatrix) + clrb p. Removing a
+split is setm(14 -> InputNone, type 8) + clrb at the split.
 """
 from __future__ import annotations
 

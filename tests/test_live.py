@@ -86,3 +86,20 @@ def test_agenda_matches_the_app():
         "626c6b10a4626c6f6302a4636d6e64ce73706c64a4666c6f7700")
     assert L.osc_encode("/doAgenda", "ib", (514, b"\x01\x02\x03\x04\x05")).hex().endswith(
         "0000000501020304" "05000000")
+
+
+def test_merge_and_unsplit_match_the_app():
+    # capture 5, path 2: merge at 8, remove that merge, remove the split at 4
+    s, f = L.cmd("setm"), 1
+    setm = lambda bloc, modl, typ: {"cmnd": s, "flow": f, "bloc": bloc, "slot": 0, "modl": modl, "type": typ}
+    assert L.pack([setm(27, 789, 9), setm(8, 478, 4),
+                   {"cmnd": L.cmd("jono"), "flow": f, "bloc": 8, "bblk": 22}]).hex() == (
+        "9386a4626c6f631ba4636d6e64ce7365746da4666c6f7701a46d6f646ccd0315a4736c6f7400a4747970650986"
+        "a4626c6f6308a4636d6e64ce7365746da4666c6f7701a46d6f646ccd01dea4736c6f7400a4747970650484a462"
+        "626c6b16a4626c6f6308a4636d6e64ce6a6f6e6fa4666c6f7701")
+    assert L.pack([setm(27, 783, 9), {"cmnd": L.cmd("clrb"), "flow": f, "bloc": 8}]).hex() == (
+        "9286a4626c6f631ba4636d6e64ce7365746da4666c6f7701a46d6f646ccd030fa4736c6f7400a4747970650983"
+        "a4626c6f6308a4636d6e64ce636c7262a4666c6f7701")
+    assert L.pack([setm(14, 771, 8), {"cmnd": L.cmd("clrb"), "flow": f, "bloc": 4}]).hex() == (
+        "9286a4626c6f630ea4636d6e64ce7365746da4666c6f7701a46d6f646ccd0303a4736c6f7400a4747970650883"
+        "a4626c6f6304a4636d6e64ce636c7262a4666c6f7701")

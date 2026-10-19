@@ -130,17 +130,19 @@ Every write tool takes an optional `save_as`, and a read-only `.hsp` is never ov
 | `live_read` | What's loaded on the unit right now: blocks, on/off, every parameter |
 | `live_set_param` | Turn a knob, flip a switch or pick a list setting (e.g. a cab mic) right now (per-snapshot values change the active snapshot) |
 | `live_toggle_block` | Turn a block on or off right now |
-| `live_add_block` | Add an effect, amp (its cab comes with it), preamp or cab to an empty spot |
+| `live_add_block` · `live_replace_block` | Add an effect, amp (its cab comes with it), preamp, cab, IR, FX loop, send or return to an empty spot, or swap one in place |
 | `live_move_block` · `live_remove_block` | Move a block (same path or the other one) or delete it |
-| `live_add_split` | Split a path into two lanes; the second lane is positions 15–26 |
+| `live_add_split` · `live_set_split_type` · `live_remove_split` | Split a path into two lanes (the second lane is positions 15–26), change the split to Y, A/B, crossover or dynamic, or take it out |
+| `live_add_merge` · `live_remove_merge` | Join the two lanes back together, or undo that |
+| `live_set_io` | Change a path's input or output |
 | `live_snapshot` | Switch the unit to snapshot 1–8 |
 | `live_list_presets` · `live_load_preset` | See the presets stored on the unit and load one |
 | `live_save_preset` | Save the changes over the loaded user preset (factory presets refused); reloads it to check |
 
 Set `HELIX_STADIUM_HOST` to the unit's network address. Live changes are not saved until
 you save on the unit. Each one is read back from the unit, and the preset and block are
-re-checked right before every change. Not supported yet: list-style settings (note values,
-mic choices), adding amps, cabs or B-lane blocks, and saving.
+re-checked right before every change. The unit refuses the Variax B inputs at a path's main
+input; `live_set_io` says so rather than pretending.
 
 Every write tool goes through the safety gate above; set `HELIX_MCP_READONLY` to leave them out.
 
