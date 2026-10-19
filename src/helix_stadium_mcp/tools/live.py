@@ -101,11 +101,11 @@ def register(mcp, ctx) -> None:
     @mcp.tool(name="live_set_param")
     def live_set_param(preset_id: int, path: int, position: int, model: str, param: str,
                        value: str) -> dict:
-        """Change one knob or on/off switch on the unit right now (not saved until the user
+        """Change one knob, switch or list setting on the unit right now (not saved until the user
         saves). `value` is in real units, e.g. `7` for Drive 7, `35` for 35 %, `on`/`off`.
         Get the other arguments from live_read. On a per-snapshot parameter this changes
         the ACTIVE snapshot's value only (switch with live_snapshot first). List-type
-        settings (note values, mic choices) can't be changed live yet."""
+        settings take their label, e.g. `1/8` or a mic name."""
         cat, e = _catalog(ctx)
         if e:
             return e
@@ -116,11 +116,11 @@ def register(mcp, ctx) -> None:
                 pid, pdef = _pid(md, model, param)
                 L.check_target(blk, model, pid, pdef)
                 v = stored_value(cat, model, param, _parse_value(value))
-                if pdef["type"] == "f":
-                    v = float(v)
+                if pdef["type"] in ("f", "i"):
+                    v = float(v) if pdef["type"] == "f" else int(v)
                     if not pdef["min"] <= v <= pdef["max"]:
                         raise ValueError(f"{param} must stay in its range")
-                    tags, args = "iiiifi", (v,)
+                    tags, args = "iiii" + pdef["type"] + "i", (v,)
                 else:
                     v = bool(v)
                     tags, args = "iiii" + ("T" if v else "F") + "i", (v,)
@@ -209,4 +209,49 @@ def register(mcp, ctx) -> None:
             if now != preset:
                 raise ValueError("the unit did not load that preset")
             return E.ok({"preset_id": now}, summary=f"preset {now} loaded")
+        return guarded(go)
+
+    def user_presets(u):
+        replies, _ = u.call("/GetContainerContents", "i", -2, reply="/GetContainerContents")
+        return L.presets(next(x for x in replies[-1][1] if isinstance(x, bytes)))
+
+    @mcp.tool(name="live_save_preset")
+    def live_save_preset(preset_id: int) -> dict:
+        """Save the unit's current changes over the loaded USER preset, same name and slot
+        (like Save on the unit). This permanently replaces the stored preset: get the user's
+        OK first. Factory presets are refused. `preset_id` is from live_read. Verified by
+        reloading the preset and checking every block and value came back."""
+        def go():
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                before = user_presets(u)
+                if preset_id not in {p["id"] for p in before}:
+                    raise ValueError("only your own (user) presets can be saved live")
+                want = L.flow_state(eb)
+                # re-check right before saving: a preset switched on the unit since the
+                # first check would otherwise be saved over this one
+                # ponytail: still a one-round-trip window; the protocol has no atomic check
+                if u.property("server.active.preset.id") != preset_id:
+                    raise ValueError("a different preset was loaded on the unit; nothing saved")
+                # the last two args are the block selected in the app; the input block
+                # (path 1 position 0) is always there
+                u.call("/SavePresetWithCID", "iii", preset_id, 0, 0)
+                after = user_presets(u)
+                # don't reload (which drops unsaved edits) if someone changed it meanwhile
+                if L.flow_state(u.edit_buffer()) != want:
+                    raise ValueError("the preset was changed on the unit during the save; "
+                                     "saved but not checked, check it on the unit")
+                u.call("/LoadPresetWithCID", "i", preset_id)
+                snap = eb["cg__"].get("asnp", 0)        # loading may land on another snapshot
+                u.call("/activateSnapshot", "i", snap)
+                got = L.flow_state(u.edit_buffer())
+            if after != before:
+                raise ValueError("the unit's preset list changed unexpectedly during the save; "
+                                 "check it on the unit")
+            if got != want:
+                raise ValueError("saved, but reloading the preset didn't bring every value back; "
+                                 "check it on the unit")
+            name = next(p["name"] for p in after if p["id"] == preset_id)
+            return E.ok({"preset_id": preset_id, "name": name},
+                        summary=f"saved '{name}' (reloaded and checked)")
         return guarded(go)

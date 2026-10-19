@@ -128,11 +128,12 @@ Every write tool takes an optional `save_as`, and a read-only `.hsp` is never ov
 | Tool | What you'd ask it |
 |---|---|
 | `live_read` | What's loaded on the unit right now: blocks, on/off, every parameter |
-| `live_set_param` | Turn a knob or flip an on/off switch right now (per-snapshot values change the active snapshot) |
+| `live_set_param` | Turn a knob, flip a switch or pick a list setting (e.g. a cab mic) right now (per-snapshot values change the active snapshot) |
 | `live_toggle_block` | Turn a block on or off right now |
-| `live_add_block` | Add an effect to an empty spot (positions 1–12) |
-| `live_snapshot` | Switch the unit to snapshot 1–8 |
-| `live_list_presets` · `live_load_preset` | See the presets stored on the unit and load one |
+| `live_add_block` | Add an effect to an empty spot (positions 1â€“12) |
+| `live_snapshot` | Switch the unit to snapshot 1â€“8 |
+| `live_list_presets` Â· `live_load_preset` | See the presets stored on the unit and load one |
+| `live_save_preset` | Save the changes over the loaded user preset (factory presets refused); reloads it to check |
 
 Set `HELIX_STADIUM_HOST` to the unit's network address. Live changes are not saved until
 you save on the unit. Each one is read back from the unit, and the preset and block are

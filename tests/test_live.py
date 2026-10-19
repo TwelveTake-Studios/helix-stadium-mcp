@@ -47,8 +47,15 @@ def test_guards():
     L.check_target(L.find(eb, NAMES, 2, 0), "Kinky", 1, FLOAT)       # path 2
     with pytest.raises(ValueError, match="preset changed"):
         L.check_target(drive, "Delay", 1, FLOAT)
-    with pytest.raises(ValueError, match="list-type"):
-        L.check_target(drive, "Kinky", 1, {"type": "i"})
+    with pytest.raises(ValueError, match="type"):
+        L.check_target(drive, "Kinky", 1, {"type": "i"})              # a knob isn't a list
+
+
+def test_list_param_tag_matches_the_app():
+    # Optical Trem note value -> option 7 (capture 3)
+    assert L.osc_encode("/ParamValueSet", "iiiiiii", (106, 0, 4, 0, 9, 7, -1)).hex() == (
+        "2f506172616d56616c756553657400002c69696969696969000000000000006a"
+        "00000000000000040000000000000009" "00000007ffffffff")
 
 
 def test_bool_tag_and_free_position():
