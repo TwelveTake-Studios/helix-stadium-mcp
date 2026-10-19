@@ -15,6 +15,8 @@ from ..util import envelope as E
 from .edit import _parse_value
 from .read import _catalog
 
+_FIXED = {"input", "output", "split", "join", "send", "return", "fxloop", "harness", "none", "ir"}
+
 
 def _defs():
     md = load_modeldefs()
@@ -170,32 +172,111 @@ def register(mcp, ctx) -> None:
             return E.ok({"snapshot": snapshot}, summary=f"snapshot {snapshot} is active")
         return guarded(go)
 
+    def _where(eb, names):
+        return {(b["path"], b["position"]): b["model"] for b in L.blocks(eb, names) if b["slot"] == 0}
+
+    def _movable(md, model):
+        # I/O, splits, merges, sends/returns and loops: not captured, or reach outside the unit
+        if model.startswith(("P35_", "#")) or (md.get(model) or {}).get("category") in _FIXED:
+            raise ValueError(f"{model} can't be added, moved or removed live")
+
     @mcp.tool(name="live_add_block")
     def live_add_block(preset_id: int, path: int, position: int, model: str) -> dict:
         """Add a block to an EMPTY spot on the unit right now (not saved until the user
-        saves). Effects only so far. `model` is a model id from search_models (e.g. HD2_DistKinkyBoostMono);
-        `position` is 1-12 and must be free in live_read. It starts at the
-        model's default settings."""
+        saves): effects, amps, preamps or cabs. `model` is a model id from search_models
+        (e.g. HD2_DistKinkyBoostMono). `position` is 1-12, or 15-26 on a path with a split
+        (its second lane), and must be free in live_read. An amp brings its own cab: the
+        unit adds it, and `added` lists every block that appeared."""
         def go():
             md, names = _defs()
             rec = md.get(model)
             if not rec:
                 raise KeyError(f"unknown model {model!r}; use search_models")
-            # ponytail: only an effect on the main lane was captured; amps, cabs, I/O and the
-            # B lane (15-26, likely a split) need their own capture
-            if rec.get("category") in ("amp", "preamp", "cab_ir_interp") or model.startswith("P35_"):
-                raise ValueError("only effect blocks can be added live so far")
-            if not 1 <= position <= 12:
-                raise ValueError("live blocks can only be added at positions 1-12 so far")
+            _movable(md, model)
             with L.Unit() as u:
                 eb = active(u, preset_id)
                 L.free_position(eb, path, position)
                 u.call("/ModelSet", "iiii", path - 1, position, 0, rec["id"])
-                got = L.find(u.edit_buffer(), names, path, position)["model"]
-            if got != model:
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, position)) != model:
                 raise ValueError("the unit did not add the block")
+            before = _where(eb, names)
+            added = [{"path": p, "position": q, "model": m}
+                     for (p, q), m in sorted(now.items()) if before.get((p, q)) != m]
+            return E.ok({"path": path, "position": position, "model": model, "added": added},
+                        summary=f"added {model} at path {path} position {position}"
+                                f"{f' (+{len(added) - 1} more)' if len(added) > 1 else ''} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_move_block")
+    def live_move_block(preset_id: int, path: int, position: int, model: str,
+                        to_path: int, to_position: int) -> dict:
+        """Move a block to an EMPTY spot, on the same path or the other one, right now (not
+        saved until the user saves). Same position rules as live_add_block."""
+        def go():
+            md, names = _defs()
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                L.check_target(L.find(eb, names, path, position), model)
+                _movable(md, model)
+                L.free_position(eb, to_path, to_position)
+                u.call("/doAgenda", "b", L.pack([{"cmnd": L.cmd("movb"), "fl_s": path - 1,
+                                                  "bl_s": position, "fl_d": to_path - 1,
+                                                  "bl_d": to_position}]))
+                now = _where(u.edit_buffer(), names)
+            if now.get((to_path, to_position)) != model or (path, position) in now:
+                raise ValueError("the unit did not move the block")
+            return E.ok({"path": to_path, "position": to_position, "model": model},
+                        summary=f"moved {model} to path {to_path} position {to_position} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_remove_block")
+    def live_remove_block(preset_id: int, path: int, position: int, model: str) -> dict:
+        """Delete a block right now (not saved until the user saves). Get the arguments from
+        live_read. Splits and I/O blocks are refused."""
+        def go():
+            md, names = _defs()
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                L.check_target(L.find(eb, names, path, position), model)
+                _movable(md, model)
+                u.call("/doAgenda", "b", L.pack([{"cmnd": L.cmd("clrb"), "flow": path - 1,
+                                                  "bloc": position}]))
+                now = _where(u.edit_buffer(), names)
+            if (path, position) in now:
+                raise ValueError("the unit did not remove the block")
             return E.ok({"path": path, "position": position, "model": model},
-                        summary=f"added {model} at path {path} position {position} (not saved)")
+                        summary=f"removed {model} from path {path} position {position} (not saved)")
+        return guarded(go)
+
+    @mcp.tool(name="live_add_split")
+    def live_add_split(preset_id: int, path: int, position: int) -> dict:
+        """Split a path into two lanes at an EMPTY spot (a Y split, like Add Split in the
+        app), right now (not saved until the user saves). The second lane is positions 15-26:
+        add blocks there with live_add_block."""
+        def go():
+            md, names = _defs()
+            if not 1 <= position <= 12:
+                raise ValueError("a split goes at position 1-12")
+            with L.Unit() as u:
+                eb = active(u, preset_id)
+                if L.has_split(eb, path):
+                    raise ValueError(f"path {path} already has a split")
+                L.free_position(eb, path, position)
+                f, ids = path - 1, {k: md[k]["id"] for k in ("P35_OutputMatrix", "P35_AppDSPSplitY")}
+                # ponytail: bblk = position + 14 is from one capture (split at 2 -> 16);
+                # the read-back below catches it if that's wrong
+                u.call("/doAgenda", "b", L.pack([
+                    {"cmnd": L.cmd("setm"), "flow": f, "bloc": 27, "slot": 0,
+                     "modl": ids["P35_OutputMatrix"], "type": 9},
+                    {"cmnd": L.cmd("setm"), "flow": f, "bloc": position, "slot": 0,
+                     "modl": ids["P35_AppDSPSplitY"], "type": 3},
+                    {"cmnd": L.cmd("spld"), "flow": f, "bloc": position, "bblk": position + 14}]))
+                now = _where(u.edit_buffer(), names)
+            if now.get((path, position)) != "P35_AppDSPSplitY" or now.get((path, 27)) != "P35_OutputMatrix":
+                raise ValueError("the unit did not add the split")
+            return E.ok({"path": path, "position": position},
+                        summary=f"split path {path} at position {position}; second lane is 15-26 (not saved)")
         return guarded(go)
 
     @mcp.tool(name="live_load_preset")

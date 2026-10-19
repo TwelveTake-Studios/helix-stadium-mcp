@@ -68,3 +68,21 @@ def test_bool_tag_and_free_position():
     for pos in (1, 13, 0):
         with pytest.raises(ValueError):
             L.free_position(eb, 1, pos)
+
+
+def test_agenda_matches_the_app():
+    # the app's own /doAgenda blobs (capture 4): move, delete, Y split at position 2
+    m, c = L.cmd("movb"), L.cmd("clrb")
+    assert L.pack([{"cmnd": m, "fl_s": 0, "bl_s": 1, "fl_d": 1, "bl_d": 4}]).hex() == (
+        "9185a4626c5f6404a4626c5f7301a4636d6e64ce6d6f7662a4666c5f6401a4666c5f7300")
+    assert L.pack([{"cmnd": c, "flow": 1, "bloc": 4}]).hex() == (
+        "9183a4626c6f6304a4636d6e64ce636c7262a4666c6f7701")
+    s = L.cmd("setm")
+    assert L.pack([{"cmnd": s, "flow": 0, "bloc": 27, "slot": 0, "modl": 783, "type": 9},
+                   {"cmnd": s, "flow": 0, "bloc": 2, "slot": 0, "modl": 475, "type": 3},
+                   {"cmnd": L.cmd("spld"), "flow": 0, "bloc": 2, "bblk": 16}]).hex() == (
+        "9386a4626c6f631ba4636d6e64ce7365746da4666c6f7700a46d6f646ccd030fa4736c6f7400a4747970650986"
+        "a4626c6f6302a4636d6e64ce7365746da4666c6f7700a46d6f646ccd01dba4736c6f7400a4747970650384a462"
+        "626c6b10a4626c6f6302a4636d6e64ce73706c64a4666c6f7700")
+    assert L.osc_encode("/doAgenda", "ib", (514, b"\x01\x02\x03\x04\x05")).hex().endswith(
+        "0000000501020304" "05000000")
