@@ -4,7 +4,8 @@ A param's ``display_tag`` (from UIDefs) points to a P35Controls control-type OR 
 an inline enum list. Three stored-value domains, chosen by the control-type,
 never guessed:
   A  normalized x scale  (``dspToDisplayScale``)
-  B  bipolar normalized  (``min + stored*(max-min)`` via minDisplayValue/maxDisplayValue)
+  B  bipolar normalized  (the param's stored range, usually 0..1 but -1..1 for Agoura
+     Sag/Ripple, mapped linearly onto minDisplayValue..maxDisplayValue)
   C  real units          (identity)
 Then ``format``/``formatUnits`` (a printf string or a list of display-value bands)
 produces the human readout.
@@ -77,6 +78,20 @@ def _enum_index(labels, display):
     raise ValueError(f"{display!r} is not a valid option; choices: {list(labels)}")
 
 
+def _stored_range(catalog, model_id: str, param_id: str):
+    """The param's stored ``(lo, hi)`` from the model-defs; ``(0, 1)`` when unknown
+    (or for a catalog without an install, e.g. test fakes)."""
+    res = getattr(catalog, "res", None)
+    if res is not None:
+        from ..modeldefs import param_meta
+        pm = param_meta(model_id, res).get(param_id)
+        if isinstance(pm, dict):
+            lo, hi = pm.get("min"), pm.get("max")
+            if all(isinstance(v, (int, float)) and not isinstance(v, bool) for v in (lo, hi))                     and hi > lo:
+                return lo, hi
+    return 0, 1
+
+
 def stored_value(catalog, model_id: str, param_id: str, display):
     """Inverse of :func:`display_string`: a real-units display value -> stored value.
 
@@ -108,7 +123,8 @@ def stored_value(catalog, model_id: str, param_id: str, display):
         return num / scale
     if "minDisplayValue" in ctrl and "maxDisplayValue" in ctrl:    # domain B
         mn, mx = ctrl["minDisplayValue"], ctrl["maxDisplayValue"]
-        return (num - mn) / (mx - mn) if mx != mn else num
+        lo, hi = _stored_range(catalog, model_id, param_id)
+        return lo + (num - mn) / (mx - mn) * (hi - lo) if mx != mn else num
     return num                                       # domain C (identity/real units)
 
 
@@ -143,7 +159,9 @@ def display_string(catalog, model_id: str, param_id: str, stored):
         if scale is not None:                                # domain A
             num = stored * scale
         elif "minDisplayValue" in ctrl and "maxDisplayValue" in ctrl:   # domain B
-            num = ctrl["minDisplayValue"] + stored * (ctrl["maxDisplayValue"] - ctrl["minDisplayValue"])
+            lo, hi = _stored_range(catalog, model_id, param_id)
+            mn, mx = ctrl["minDisplayValue"], ctrl["maxDisplayValue"]
+            num = mn + (stored - lo) / (hi - lo) * (mx - mn)
         else:                                                # domain C
             num = stored
         formatted = _apply_format(ctrl.get("formatUnits") or ctrl.get("format"), num)

@@ -93,3 +93,23 @@ def test_stored_value_bad_enum_raises():
     cat = _cat("Mode", ["Bass", "Guitar"])
     with pytest.raises(ValueError):
         stored_value(cat, "X", "Mode", "Banjo")
+
+
+def test_domain_b_uses_the_params_stored_range(monkeypatch):
+    # Agoura Sag/Ripple are stored -1..1 (0 = Stock) on a -10..+10 display control;
+    # assuming 0..1 showed them as -30..+10 with default -10 (issue #1).
+    import helix_stadium_mcp.modeldefs as md
+    from helix_stadium_mcp.encoding import stored_value
+    monkeypatch.setattr(md, "param_meta", lambda m, res=None: {"Sag": {"min": -1, "max": 1, "type": "f"}})
+    ctrl = {"minDisplayValue": -10, "maxDisplayValue": 10, "zeroValue": 0.0, "format": [
+        {"lowerBound": -99999, "upperBound": -0.05, "formatUnits": "%.1f"},
+        {"lowerBound": -0.05, "upperBound": 0.05, "formatUnits": "Stock"},
+        {"lowerBound": 0.05, "upperBound": 999999, "formatUnits": "%+.1f"},
+    ]}
+    cat = _cat("Sag", "amp_sag_ripple", ctrl)
+    cat.res = "fake-res"
+    assert display_string(cat, "Amp", "Sag", 0)[0] == "Stock"
+    assert display_string(cat, "Amp", "Sag", -1)[0] == "-10.0"
+    assert display_string(cat, "Amp", "Sag", 1)[0] == "+10.0"
+    assert stored_value(cat, "Amp", "Sag", 0) == 0
+    assert stored_value(cat, "Amp", "Sag", -5) == -0.5
