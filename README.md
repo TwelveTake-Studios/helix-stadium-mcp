@@ -62,7 +62,7 @@ Every change is written back through a safety gate — validate → round-trip �
 ## Install & configure
 
 ```bash
-uvx twelvetake-helix-stadium-mcp serve      # or: pipx run twelvetake-helix-stadium-mcp serve
+uvx twelvetake-helix-stadium-mcp@latest serve      # or: pipx run twelvetake-helix-stadium-mcp serve
 ```
 
 Add it to your MCP client's config. Most use an `mcpServers` block:
@@ -72,7 +72,7 @@ Add it to your MCP client's config. Most use an `mcpServers` block:
   "mcpServers": {
     "helix-stadium": {
       "command": "uvx",
-      "args": ["twelvetake-helix-stadium-mcp", "serve"]
+      "args": ["twelvetake-helix-stadium-mcp@latest", "serve"]
     }
   }
 }
