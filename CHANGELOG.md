@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-27
+
+### Fixed
+- On macOS, auto-detection now looks for the Helix Stadium catalog in
+  `/Applications/Line6/Helix Stadium.app/Contents/Resources`, where Line 6's installer places it,
+  and in `/Applications/Helix Stadium.app/Contents/Resources` (#3). It previously checked only
+  folders the installer does not use, so `HELIX_STADIUM_RES` had to be set.
+- Auto-detection now uses a folder only if it contains the model catalog, so an empty or unrelated
+  folder at an expected location is skipped.
+
 ## [0.2.3] - 2026-10-19
 
 ### Fixed
@@ -144,7 +154,8 @@ the user's own installed Helix Stadium.
   planned `HELIX_MCP_READONLY` toggle will keep the server read-only even after write
   tools land. The threat model is documented in `SECURITY.md`.
 
-[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.3...HEAD
+[Unreleased]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/TwelveTake-Studios/helix-stadium-mcp/compare/v0.2.0...v0.2.1

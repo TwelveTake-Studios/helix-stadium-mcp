@@ -9,15 +9,15 @@ import os
 import sys
 from pathlib import Path
 
-# Confirmed on a real Windows install.
+CATALOG = "P35ModelCatalog.json"
+
 _WINDOWS = [
     r"C:\Program Files (x86)\Line6\Helix Stadium\res",
     r"C:\Program Files\Line6\Helix Stadium\res",
 ]
-# UNVERIFIED — needs confirmation on a real Mac.
 _MACOS = [
-    "/Applications/Helix Stadium.app/Contents/Resources/res",
-    "/Applications/Line 6/Helix Stadium.app/Contents/Resources/res",
+    "/Applications/Line6/Helix Stadium.app/Contents/Resources",
+    "/Applications/Helix Stadium.app/Contents/Resources",
 ]
 
 
@@ -37,11 +37,12 @@ def resolve_res_dir(explicit: str | os.PathLike | None = None) -> Path:
                 return p
     for p in candidate_res_dirs():
         tried.append(str(p))
-        if p.is_dir():
+        if (p / CATALOG).is_file():
             return p
     raise FileNotFoundError(
-        "Helix Stadium res/ catalog not found. Set HELIX_STADIUM_RES to your install's "
-        "res folder (the one containing P35ModelCatalog.json). Probed:\n  " + "\n  ".join(tried)
+        "Helix Stadium model catalog not found. Set HELIX_STADIUM_RES to the folder containing "
+        f"{CATALOG}: the install's res folder on Windows, or Helix Stadium.app/Contents/Resources "
+        "on macOS. Probed:\n  " + "\n  ".join(tried)
     )
 
 
@@ -50,7 +51,7 @@ def detect(explicit: str | None = None) -> dict:
     try:
         res = resolve_res_dir(explicit)
         return {"found": True, "res_dir": str(res),
-                "has_catalog": (res / "P35ModelCatalog.json").is_file()}
+                "has_catalog": (res / CATALOG).is_file()}
     except FileNotFoundError as e:
         return {"found": False, "res_dir": None, "message": str(e),
                 "candidates": [str(p) for p in candidate_res_dirs()]}

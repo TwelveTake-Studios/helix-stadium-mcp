@@ -81,8 +81,9 @@ Add it to your MCP client's config. Most use an `mcpServers` block:
 }
 ```
 
-If the catalog isn't auto-detected, set `HELIX_STADIUM_RES` to your install's `res/` folder (the one
-containing `P35ModelCatalog.json`). Check detection with `helix-stadium-mcp doctor`.
+If the catalog isn't auto-detected, set `HELIX_STADIUM_RES` to the folder containing
+`P35ModelCatalog.json`: your install's `res` folder on Windows, or
+`Helix Stadium.app/Contents/Resources` on macOS. Check detection with `helix-stadium-mcp doctor`.
 
 To keep the server read-only — for instance when you point it at presets you don't fully trust — set
 `HELIX_MCP_READONLY=1`, and the write tools are left out at startup.
@@ -130,12 +131,10 @@ between minor versions.
 - **v0.5:** Preset generation from a text description.
 - **v1.0:** A stable tool interface.
 
-macOS support is in progress alongside Windows.
-
 ## Requirements
 
-- **Helix Stadium** installed (Windows confirmed; macOS support in progress). The server reads the
-  model catalog and per-model definitions from your own install at runtime.
+- **Helix Stadium** installed, on Windows or macOS. The server reads the model catalog and
+  per-model definitions from your own install at runtime.
 - Python 3.10+.
 
 ## Trademarks
